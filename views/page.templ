@@ -1,0 +1,21 @@
+package views
+
+
+
+templ Page(content templ.Component) {
+	<!DOCTYPE html>
+	<html>
+		<head> 
+    			<link rel="stylesheet" href="/public/styles.css">
+			<script src="/public/index.js"></script>
+		</head>
+
+		<body>
+			@content
+			<div id="side-panel"></div>
+			<div>app</div>
+			<button hx-get="/components/side-panel"></button>
+		</body>
+
+	</html>
+}
