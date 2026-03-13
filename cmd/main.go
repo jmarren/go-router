@@ -11,17 +11,17 @@ import (
 	"github.com/jmarren/go-router/views"
 )
 
-func loggerOne(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func loggerOne(h gorouter.Handler) gorouter.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		fmt.Println(r.Method + " " + r.URL.Path)
-		h(w, r)
+		return h(w, r)
 	}
 }
 
-func loggerTwo(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func loggerTwo(h gorouter.Handler) gorouter.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		fmt.Println("logger 2")
-		h(w, r)
+		return h(w, r)
 	}
 }
 
@@ -29,16 +29,23 @@ func handleRoot(w http.ResponseWriter, r *http.Request) (templ.Component, error)
 	return views.Home(), nil
 }
 
-func SayHi(w http.ResponseWriter, r *http.Request) {
+func SayHi(w http.ResponseWriter, r *http.Request) error {
 	w.Write([]byte("hi there"))
+	return nil
 }
 
 func handleUsers(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("users"))
 }
 
-func handleYellow(w http.ResponseWriter, r *http.Request) {
+func handleYellow(w http.ResponseWriter, r *http.Request) error {
 	w.Write([]byte("yellow"))
+	return fmt.Errorf("yellow is dumb")
+}
+
+func yellowCatcher(w http.ResponseWriter, r *http.Request, err error) error {
+	fmt.Printf("caught yellow error = %s\n", err)
+	return nil
 }
 
 func handleJohn(w http.ResponseWriter, r *http.Request) {
@@ -93,17 +100,17 @@ func catchRedError(w http.ResponseWriter, r *http.Request, err error) (templ.Com
 }
 
 // add username to the request
-func userMiddleware(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func userMiddleware(h gorouter.Handler) gorouter.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		r = r.WithContext(context.WithValue(r.Context(), "username", "john"))
-		h(w, r)
+		return h(w, r)
 	}
 }
 
-func logUsernameMiddleware(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func logUsernameMiddleware(h gorouter.Handler) gorouter.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		fmt.Printf("username = %s\n", r.Context().Value("username"))
-		h(w, r)
+		return h(w, r)
 	}
 }
 
@@ -118,14 +125,15 @@ func main() {
 	app.GetComponent("/hi", handleHi)
 	app.Use(loggerOne)
 	app.Use(userMiddleware)
+	app.UseComponentCatcher(colorsCatcher)
 
 	colorsPage := gorouter.CreateComponentRouter()
 	colorsPage.Use(logUsernameMiddleware)
 	colorsPage.UseHxNester(views.ColorsPage)
 
-	// colorsPage.ErrComponent
 	colorsPage.Use(loggerTwo)
-	colorsPage.UseCatcher(colorsCatcher)
+	colorsPage.UseCatcher(yellowCatcher)
+	colorsPage.UseComponentCatcher(colorsCatcher)
 	colorsPage.Get("/yellow", handleYellow)
 	colorsPage.GetComponent("/red", handleRed)
 	colorsPage.GetComponent("/green", handleRed).Catch(catchRedError)
@@ -136,19 +144,6 @@ func main() {
 	numbersPage.GetComponent("/one", gorouter.UnsafeComponent(handleOne))
 	numbersPage.GetComponent("/two", gorouter.UnsafeComponent(handleTwo))
 
-	// dashboard := gorouter.CreateComponentRouter()
-
-	// dashboard.UseNester(dashboardNester)
-	//
-	// dashboard.GetComponent("/numbers/one", handleOne)
-	// dashboard.GetComponent("/numbers/two", handleOne)
-	// dashboard.GetComponent("/colors/red", handleRed)
-	//
-	// app.SubComponent("/dashboard", dashboard)
-
-	//
-	// dashoardNumbers := gorouter.CreateComponentRouter()
-	//
 	api := gorouter.CreateRouter()
 	api.Get("/hi", SayHi)
 	colorsPage.SubRoute("/api", api)

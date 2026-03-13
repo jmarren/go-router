@@ -23,7 +23,7 @@ func (c *ComponentRouter) UseHxNester(n SimpleNester) {
 	c.UseNester(UnsafeHxReqWrapper(n))
 }
 
-func (c *ComponentRouter) UseCatcher(ec ComponentErrCatcher) {
+func (c *ComponentRouter) UseComponentCatcher(ec ComponentErrCatcher) {
 	c.errCatchers = append([]ComponentErrCatcher{ec}, c.errCatchers...)
 }
 
