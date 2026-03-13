@@ -1,5 +1,13 @@
 package gorouter
 
+import (
+	"net/http"
+
+	"github.com/a-h/templ"
+)
+
+type Nester func(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component
+
 type ComponentRouter struct {
 	*Router
 	componentRoutes []*ComponentRoute
@@ -17,44 +25,31 @@ func (c *ComponentRouter) UseNester(n Nester) {
 	c.nesters = append([]Nester{n}, c.nesters...)
 }
 
-func (c *ComponentRouter) GetComponent(path string, ch ComponentHandler) {
+func (c *ComponentRouter) appendComponentRoute(path string, ch ComponentHandler, method string) {
 	c.componentRoutes = append(c.componentRoutes, &ComponentRoute{
 		nesters:          c.nesters,
 		path:             path,
-		method:           "GET",
+		method:           method,
 		componentHandler: ch,
 		middlewares:      c.middlewares,
 	})
+
+}
+
+func (c *ComponentRouter) GetComponent(path string, ch ComponentHandler) {
+	c.appendComponentRoute(path, ch, "GET")
 }
 
 func (c *ComponentRouter) PostComponent(path string, ch ComponentHandler) {
-	c.componentRoutes = append(c.componentRoutes, &ComponentRoute{
-		nesters:          c.nesters,
-		path:             path,
-		method:           "POST",
-		componentHandler: ch,
-		middlewares:      c.middlewares,
-	})
+	c.appendComponentRoute(path, ch, "POST")
 }
 
 func (c *ComponentRouter) PutComponent(path string, ch ComponentHandler) {
-	c.componentRoutes = append(c.componentRoutes, &ComponentRoute{
-		nesters:          c.nesters,
-		path:             path,
-		method:           "PUT",
-		componentHandler: ch,
-		middlewares:      c.middlewares,
-	})
+	c.appendComponentRoute(path, ch, "PUT")
 }
 
 func (c *ComponentRouter) DeleteComponent(path string, ch ComponentHandler) {
-	c.componentRoutes = append(c.componentRoutes, &ComponentRoute{
-		path:             path,
-		nesters:          c.nesters,
-		method:           "DELETE",
-		componentHandler: ch,
-		middlewares:      c.middlewares,
-	})
+	c.appendComponentRoute(path, ch, "DELETE")
 }
 
 func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRouter) {

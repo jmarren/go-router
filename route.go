@@ -10,7 +10,9 @@ type Route struct {
 }
 
 func (r *Route) HTTPHandler() http.HandlerFunc {
-	// make a copy of the handler
+	// make a copy of the handler.
+	// NOTE: we could use mutation instead, but cloning will prevent
+	// issues if this method is called more than once
 	handler := r.handler
 
 	// apply middlewares to it

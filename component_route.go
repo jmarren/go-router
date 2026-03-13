@@ -18,23 +18,11 @@ type ComponentRoute struct {
 
 func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 
-	// create an empty default handler
-	handler := func(w http.ResponseWriter, r *http.Request) {}
-
-	// apply middlewares to handler
-	for i := 0; i < len(c.middlewares); i++ {
-		handler = c.middlewares[i](handler)
-	}
-
 	// create a return handler that:
-	// - executes middlewares
 	// - creates component
 	// - nests component
 	// - renders component
-	ret := func(w http.ResponseWriter, r *http.Request) {
-		// apply the handler so that middlewares are executed
-		// handler(w, r)
-		handler(w, r)
+	handler := func(w http.ResponseWriter, r *http.Request) {
 
 		// create the component using the componentHandler
 		component := c.componentHandler(w, r)
@@ -48,28 +36,11 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 		component.Render(r.Context(), w)
 	}
 
-	return http.HandlerFunc(ret)
+	// apply middlewares to the created handler
+	for i := 0; i < len(c.middlewares); i++ {
+		handler = c.middlewares[i](handler)
+	}
+
+	return http.HandlerFunc(handler)
 
 }
-
-// func (c *ComponentRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-// 	// create an empty handler
-// 	handler := func(w http.ResponseWriter, r *http.Request) {}
-//
-// 	// apply middlewares to handler
-// 	for i := 0; i < len(c.middlewares); i++ {
-// 		handler = c.middlewares[i](handler)
-// 	}
-//
-// 	// apply the handler so that middlewares are executed
-// 	handler(w, r)
-//
-// 	component := c.componentHandler(w, r)
-//
-// 	// apply nesters
-// 	for i := 0; i < len(c.nesters); i++ {
-// 		component = c.nesters[i](w, r, component)
-// 	}
-//
-// 	component.Render(r.Context(), w)
-// }

@@ -2,8 +2,6 @@ package gorouter
 
 import (
 	"net/http"
-
-	"github.com/a-h/templ"
 )
 
 type Middleware func(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request)
@@ -12,8 +10,6 @@ type Router struct {
 	middlewares []Middleware
 	routes      []*Route
 }
-
-type Nester func(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component
 
 func CreateRouter() *Router {
 	return &Router{
