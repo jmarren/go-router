@@ -7,6 +7,13 @@ type App struct {
 	*ComponentRouter
 }
 
+func CreateApp() *App {
+	return &App{
+		mux:             http.NewServeMux(),
+		ComponentRouter: CreateComponentRouter(),
+	}
+}
+
 // applies the apps routes to the apps mux
 func (a *App) applyRoutes() {
 
