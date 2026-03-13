@@ -9,9 +9,15 @@ type Route struct {
 	handler     func(w http.ResponseWriter, r *http.Request)
 }
 
-func (route *Route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	for i := 0; i < len(route.middlewares); i++ {
-		route.handler = route.middlewares[i](route.handler)
+func (r *Route) HTTPHandler() http.HandlerFunc {
+	// make a copy of the handler
+	handler := r.handler
+
+	// apply middlewares to it
+	for i := 0; i < len(r.middlewares); i++ {
+		handler = r.middlewares[i](handler)
 	}
-	route.handler(w, r)
+
+	return handler
+
 }

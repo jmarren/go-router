@@ -19,12 +19,12 @@ func (a *App) applyRoutes() {
 
 	// handle regular routes with path
 	for _, route := range a.routes {
-		a.mux.Handle(route.path, route)
+		a.mux.Handle(route.path, route.HTTPHandler())
 	}
 
 	// handle component routes with path
 	for _, route := range a.componentRoutes {
-		a.mux.Handle(route.path, route)
+		a.mux.Handle(route.path, route.HTTPHandler())
 	}
 }
 
