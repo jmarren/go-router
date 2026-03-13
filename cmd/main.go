@@ -25,8 +25,8 @@ func loggerTwo(h func(w http.ResponseWriter, r *http.Request)) func(w http.Respo
 	}
 }
 
-func handleRoot(w http.ResponseWriter, r *http.Request) templ.Component {
-	return views.Home()
+func handleRoot(w http.ResponseWriter, r *http.Request) (templ.Component, error) {
+	return views.Home(), nil
 }
 
 func SayHi(w http.ResponseWriter, r *http.Request) {
@@ -60,12 +60,12 @@ func NestColors(w http.ResponseWriter, r *http.Request, component templ.Componen
 	return views.ColorsPage(component)
 }
 
-func handleHi(w http.ResponseWriter, r *http.Request) templ.Component {
-	return views.Hi()
+func handleHi(w http.ResponseWriter, r *http.Request) (templ.Component, error) {
+	return views.Hi(), nil
 }
 
-func handleRed(w http.ResponseWriter, r *http.Request) templ.Component {
-	return views.Red()
+func handleRed(w http.ResponseWriter, r *http.Request) (templ.Component, error) {
+	return views.Red(), fmt.Errorf("some error")
 }
 
 func NestRed(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component {
@@ -87,6 +87,11 @@ func handleTwo(w http.ResponseWriter, r *http.Request) templ.Component {
 	return views.Two()
 }
 
+func catchRedError(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error) {
+	fmt.Printf("caught red error: %s\n", err)
+	return views.Red(), nil
+}
+
 // add username to the request
 func userMiddleware(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -102,22 +107,9 @@ func logUsernameMiddleware(h func(w http.ResponseWriter, r *http.Request)) func(
 	}
 }
 
-// func dashboard(w http.ResponseWriter, r *http.Request) {
-//
-// 	templ.Join()
-// }
-
-// func dashboardNester(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component {
-//
-// 	if r.Header.Get("HX-Request") == "true" {
-// 		return component
-// 	}
-//
-// 	if strings.Contains(r.URL.Path, "numbers") {
-// 		return views.SplitPage(views.ColorsPage(views.Red()), component)
-// 	}
-// 	return views.SplitPage(component, views.NumbersNester(views.One()))
-// }
+func colorsCatcher(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error) {
+	return views.DefaultErr(), nil
+}
 
 func main() {
 	app := gorouter.CreateApp()
@@ -133,15 +125,16 @@ func main() {
 
 	// colorsPage.ErrComponent
 	colorsPage.Use(loggerTwo)
+	colorsPage.UseCatcher(colorsCatcher)
 	colorsPage.Get("/yellow", handleYellow)
 	colorsPage.GetComponent("/red", handleRed)
-	colorsPage.GetComponent("/green", handleRed)
+	colorsPage.GetComponent("/green", handleRed).Catch(catchRedError)
 
 	numbersPage := gorouter.CreateComponentRouter()
 	// numbersPage.UseNester(NestColors)
 	numbersPage.UseHxNester(views.NumbersNester)
-	numbersPage.GetComponent("/one", handleOne)
-	numbersPage.GetComponent("/two", handleTwo)
+	numbersPage.GetComponent("/one", gorouter.UnsafeComponent(handleOne))
+	numbersPage.GetComponent("/two", gorouter.UnsafeComponent(handleTwo))
 
 	// dashboard := gorouter.CreateComponentRouter()
 
