@@ -1,0 +1,13 @@
+package views
+
+templ Red() {
+	<div>red</div>
+}
+
+
+templ RedNester(c templ.Component) {
+	<div>
+		<div>nest</div>
+		@c
+	</div>
+}
