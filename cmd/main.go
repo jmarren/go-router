@@ -83,6 +83,8 @@ func main() {
 
 	subComponent.UseNester(NestRed)
 
+	subComponent.Use(loggerOne)
+	subComponent.Use(loggerTwo)
 	subComponent.Get("/yellow", handleYellow)
 	subComponent.GetComponent("/red", handleRed)
 	subComponent.GetComponent("/green", handleRed)

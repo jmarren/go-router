@@ -61,11 +61,6 @@ type ComponentRouter struct {
 	nesters         []Nester
 }
 
-type App struct {
-	mux *http.ServeMux
-	*ComponentRouter
-}
-
 func (c *ComponentRouter) UseNester(n Nester) {
 	c.nesters = append([]Nester{n}, c.nesters...)
 }
@@ -134,7 +129,7 @@ func CreateApp() *App {
 
 // adds a middleware to the chain
 func (r *Router) Use(m Middleware) {
-	r.middlewares = append(r.middlewares, m)
+	r.middlewares = append([]Middleware{m}, r.middlewares...)
 }
 
 // registers a get route with the router
@@ -177,14 +172,6 @@ func (r *Router) Delete(path string, handler http.HandlerFunc) {
 	})
 }
 
-type IRouter interface {
-	Routes() []Route
-}
-
-func (r *Router) Routes() []*Route {
-	return r.routes
-}
-
 /*
 Adds a subroute the the router by adding all of its routes.
 
@@ -214,25 +201,6 @@ func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRoute
 		})
 	}
 
+	// add the subComponents router as a subroute as well
 	c.SubRoute(path, subComponent.Router)
-}
-
-// func serveComponent(w http.Response
-
-// applies the apps routes to the apps mux
-func (a *App) applyRoutes() {
-
-	for _, route := range a.routes {
-		a.mux.Handle(route.path, route)
-	}
-
-	for _, route := range a.componentRoutes {
-		a.mux.Handle(route.path, route)
-	}
-}
-
-// applies the apps routes to its mux, then listens on the provided address
-func (a *App) Serve(addr string) {
-	a.applyRoutes()
-	http.ListenAndServe(addr, a.mux)
 }
