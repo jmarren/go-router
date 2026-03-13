@@ -1,13 +1,5 @@
 package gorouter
 
-import (
-	"net/http"
-
-	"github.com/a-h/templ"
-)
-
-type Nester func(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component
-
 type ComponentRouter struct {
 	*Router
 	componentRoutes []*ComponentRoute
@@ -25,6 +17,10 @@ func (c *ComponentRouter) UseNester(n Nester) {
 	c.nesters = append([]Nester{n}, c.nesters...)
 }
 
+func (c *ComponentRouter) UseHxNester(n SimpleNester) {
+	c.UseNester(HxReqNester(n))
+}
+
 func (c *ComponentRouter) appendComponentRoute(path string, ch ComponentHandler, method string) {
 	c.componentRoutes = append(c.componentRoutes, &ComponentRoute{
 		nesters:          c.nesters,
@@ -33,7 +29,6 @@ func (c *ComponentRouter) appendComponentRoute(path string, ch ComponentHandler,
 		componentHandler: ch,
 		middlewares:      c.middlewares,
 	})
-
 }
 
 func (c *ComponentRouter) GetComponent(path string, ch ComponentHandler) {

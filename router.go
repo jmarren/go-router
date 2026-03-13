@@ -23,44 +23,34 @@ func (r *Router) Use(m Middleware) {
 	r.middlewares = append([]Middleware{m}, r.middlewares...)
 }
 
-// registers a get route with the router
-func (r *Router) Get(path string, handler func(w http.ResponseWriter, r *http.Request)) {
+// appends a route with the provided path, method, and handler
+func (r *Router) appendRoute(path string, method string, handler http.HandlerFunc) {
 	r.routes = append(r.routes, &Route{
 		path:        path,
-		method:      "GET",
+		method:      method,
 		handler:     handler,
 		middlewares: r.middlewares,
 	})
+}
+
+// registers a get route with the router
+func (r *Router) Get(path string, handler http.HandlerFunc) {
+	r.appendRoute(path, "GET", handler)
 }
 
 // registers a post route with the router
 func (r *Router) Post(path string, handler http.HandlerFunc) {
-	r.routes = append(r.routes, &Route{
-		path:        path,
-		method:      "POST",
-		handler:     handler,
-		middlewares: r.middlewares,
-	})
+	r.appendRoute(path, "POST", handler)
 }
 
 // registers a put route with the router
 func (r *Router) Put(path string, handler http.HandlerFunc) {
-	r.routes = append(r.routes, &Route{
-		path:        path,
-		method:      "PUT",
-		handler:     handler,
-		middlewares: r.middlewares,
-	})
+	r.appendRoute(path, "PUT", handler)
 }
 
 // registers a delete route with the router
 func (r *Router) Delete(path string, handler http.HandlerFunc) {
-	r.routes = append(r.routes, &Route{
-		path:        path,
-		method:      "DELETE",
-		handler:     handler,
-		middlewares: r.middlewares,
-	})
+	r.appendRoute(path, "DELETE", handler)
 }
 
 /*

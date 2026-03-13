@@ -102,10 +102,26 @@ func logUsernameMiddleware(h func(w http.ResponseWriter, r *http.Request)) func(
 	}
 }
 
+// func dashboard(w http.ResponseWriter, r *http.Request) {
+//
+// 	templ.Join()
+// }
+
+// func dashboardNester(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component {
+//
+// 	if r.Header.Get("HX-Request") == "true" {
+// 		return component
+// 	}
+//
+// 	if strings.Contains(r.URL.Path, "numbers") {
+// 		return views.SplitPage(views.ColorsPage(views.Red()), component)
+// 	}
+// 	return views.SplitPage(component, views.NumbersNester(views.One()))
+// }
+
 func main() {
 	app := gorouter.CreateApp()
-
-	app.UseNester(NestBase)
+	app.UseHxNester(views.Page)
 	app.GetComponent("/", handleRoot)
 	app.GetComponent("/hi", handleHi)
 	app.Use(loggerOne)
@@ -113,17 +129,33 @@ func main() {
 
 	colorsPage := gorouter.CreateComponentRouter()
 	colorsPage.Use(logUsernameMiddleware)
-	colorsPage.UseNester(NestColors)
+	colorsPage.UseHxNester(views.ColorsPage)
+
+	// colorsPage.ErrComponent
 	colorsPage.Use(loggerTwo)
 	colorsPage.Get("/yellow", handleYellow)
 	colorsPage.GetComponent("/red", handleRed)
 	colorsPage.GetComponent("/green", handleRed)
 
 	numbersPage := gorouter.CreateComponentRouter()
-	numbersPage.UseNester(NestNumbers)
+	// numbersPage.UseNester(NestColors)
+	numbersPage.UseHxNester(views.NumbersNester)
 	numbersPage.GetComponent("/one", handleOne)
 	numbersPage.GetComponent("/two", handleTwo)
 
+	// dashboard := gorouter.CreateComponentRouter()
+
+	// dashboard.UseNester(dashboardNester)
+	//
+	// dashboard.GetComponent("/numbers/one", handleOne)
+	// dashboard.GetComponent("/numbers/two", handleOne)
+	// dashboard.GetComponent("/colors/red", handleRed)
+	//
+	// app.SubComponent("/dashboard", dashboard)
+
+	//
+	// dashoardNumbers := gorouter.CreateComponentRouter()
+	//
 	api := gorouter.CreateRouter()
 	api.Get("/hi", SayHi)
 	colorsPage.SubRoute("/api", api)

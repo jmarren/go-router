@@ -37,10 +37,10 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 	}
 
 	// apply middlewares to the created handler
+	// (they will execute before the handler at runtime)
 	for i := 0; i < len(c.middlewares); i++ {
 		handler = c.middlewares[i](handler)
 	}
 
-	return http.HandlerFunc(handler)
-
+	return handler
 }
