@@ -3,9 +3,13 @@ package gorouter
 type Middleware func(h Handler) Handler
 
 type Router struct {
+	// middlewares to apply to all routes
 	middlewares []Middleware
-	routes      []*Route
-	catchers    []ErrCatcher
+	// routes served by the router
+	routes []*Route
+	// a slice of ErrCatchers that will
+	// handle errors returned by route handlers
+	catchers []ErrCatcher
 }
 
 func CreateRouter() *Router {
@@ -20,6 +24,7 @@ func (r *Router) Use(m Middleware) {
 	r.middlewares = append([]Middleware{m}, r.middlewares...)
 }
 
+// adds an ErrCatcher to the routers ErrCatchers array
 func (r *Router) UseCatcher(e ErrCatcher) {
 	r.catchers = append([]ErrCatcher{e}, r.catchers...)
 }

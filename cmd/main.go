@@ -56,12 +56,12 @@ func isHxRequest(w http.ResponseWriter, r *http.Request) bool {
 	return r.Header.Get("HX-Request") != "true"
 }
 
-func NestBase(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component {
-	if isHxRequest(w, r) {
-		return views.Page(component)
-	}
-	return component
-}
+// func NestBase(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component {
+// 	if isHxRequest(w, r) {
+// 		return views.Page(component)
+// 	}
+// 	return component
+// }
 
 func NestColors(w http.ResponseWriter, r *http.Request, component templ.Component) templ.Component {
 	return views.ColorsPage(component)
@@ -115,32 +115,57 @@ func logUsernameMiddleware(h gorouter.Handler) gorouter.Handler {
 }
 
 func colorsCatcher(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error) {
+	fmt.Printf("uncaught colors error = %s\n", err)
 	return views.DefaultErr(), nil
 }
 
+func WrapPage(w gorouter.Wrapper) gorouter.Wrapper {
+	return func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
+		return Page(w, r, component)
+	}
+}
+
+func Page(w http.ResponseWriter, r *http.Request, content templ.Component) (templ.Component, error) {
+
+	fmt.Println("wrapping page!")
+
+	usernameResponse := r.Context().Value("username")
+
+	username, ok := usernameResponse.(string)
+
+	if !ok {
+		return nil, fmt.Errorf("username not found")
+	}
+
+	return views.Page(content, username), nil
+
+}
+
+// func UsernameWrapper(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error) {
+//
+// }
+
 func main() {
 	app := gorouter.CreateApp()
-	app.UseHxNester(views.Page)
-	app.GetComponent("/", handleRoot)
-	app.GetComponent("/hi", handleHi)
 	app.Use(loggerOne)
 	app.Use(userMiddleware)
-	app.UseComponentCatcher(colorsCatcher)
+	app.UseHxWrapper(Page)
+	app.GetComponent("/", handleRoot)
+	app.GetComponent("/hi", handleHi)
 
 	colorsPage := gorouter.CreateComponentRouter()
+	colorsPage.UseSimpleHxWrapper(views.ColorsPage)
 	colorsPage.Use(logUsernameMiddleware)
-	colorsPage.UseHxNester(views.ColorsPage)
 
 	colorsPage.Use(loggerTwo)
 	colorsPage.UseCatcher(yellowCatcher)
-	colorsPage.UseComponentCatcher(colorsCatcher)
+	// colorsPage.Use
 	colorsPage.Get("/yellow", handleYellow)
 	colorsPage.GetComponent("/red", handleRed)
 	colorsPage.GetComponent("/green", handleRed).Catch(catchRedError)
 
 	numbersPage := gorouter.CreateComponentRouter()
-	// numbersPage.UseNester(NestColors)
-	numbersPage.UseHxNester(views.NumbersNester)
+	numbersPage.UseSimpleHxWrapper(views.ColorsPage)
 	numbersPage.GetComponent("/one", gorouter.UnsafeComponent(handleOne))
 	numbersPage.GetComponent("/two", gorouter.UnsafeComponent(handleTwo))
 

@@ -13,16 +13,17 @@ type UnsafeComponentHandler func(w http.ResponseWriter, r *http.Request) templ.C
 type ComponentErrCatcher func(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error)
 
 type ComponentRoute struct {
-	middlewares []Middleware
-	wrappers    []ComponentWrapper
-	path        string
-	method      string
-	component   ComponentHandler
-	errCatchers []ComponentErrCatcher
+	middlewares        []Middleware
+	wrapperMiddlewares []WrapMiddleware
+	// wrappers             []ComponentWrapper
+	path                 string
+	method               string
+	component            ComponentHandler
+	componentErrCatchers []ComponentErrCatcher
 }
 
 type IComponentRoute interface {
-	Catch(catcher ComponentErrCatcher) IComponentRoute
+	Catch(catcher ...ComponentErrCatcher) IComponentRoute
 	Use(m Middleware) IComponentRoute
 }
 
@@ -32,8 +33,8 @@ func UnsafeComponent(unsafeHandler UnsafeComponentHandler) ComponentHandler {
 	}
 }
 
-func (c *ComponentRoute) Catch(catcher ComponentErrCatcher) IComponentRoute {
-	c.errCatchers = append([]ComponentErrCatcher{catcher}, c.errCatchers...)
+func (c *ComponentRoute) Catch(catcher ...ComponentErrCatcher) IComponentRoute {
+	c.componentErrCatchers = append(catcher, c.componentErrCatchers...)
 	return c
 }
 
@@ -43,6 +44,14 @@ func (c *ComponentRoute) Use(m Middleware) IComponentRoute {
 }
 
 func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
+
+	wrapper := func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
+		return component, nil
+	}
+
+	for _, wm := range c.wrapperMiddlewares {
+		wrapper = wm(wrapper)
+	}
 
 	// create a return handler that:
 	// - creates component
@@ -54,8 +63,10 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 		// create the component using the componentHandler
 		component, err := c.component(w, r)
 
+		// if an error occurs,
+		// apply catchers until it is resolved to nil
 		if err != nil {
-			for _, catcher := range c.errCatchers {
+			for _, catcher := range c.componentErrCatchers {
 				component, err = catcher(w, r, err)
 				if err == nil {
 					break
@@ -63,13 +74,13 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 			}
 		}
 
-		// apply nesters to the component
-		for i := 0; i < len(c.wrappers); i++ {
-			component, err = c.wrappers[i].wrap(w, r, component)
-			if err != nil {
-				component, err = c.wrappers[i].err(w, r, err)
-			}
+		if err != nil {
+			return err
 		}
+
+		// wrap the component
+		component, err = wrapper(w, r, component)
+
 		if err != nil {
 			return err
 		}
