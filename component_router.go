@@ -1,5 +1,11 @@
 package gorouter
 
+import (
+	"net/http"
+
+	"github.com/a-h/templ"
+)
+
 /* A router that serves components */
 type ComponentRouter struct {
 	/*
@@ -15,7 +21,7 @@ type ComponentRouter struct {
 		a slice of all the wrappers that will wrap components served
 		by the router
 	*/
-	wrappersMiddlewares []WrapMiddleware
+	wrappers []Wrapper
 	/*
 		a slice of all the componentCatchers that will
 		catch errors returned by component handlers
@@ -26,9 +32,9 @@ type ComponentRouter struct {
 /* creates an empty ComponentRouter */
 func CreateComponentRouter() *ComponentRouter {
 	return &ComponentRouter{
-		Router:              CreateRouter(),
-		wrappersMiddlewares: []WrapMiddleware{},
-		componentRoutes:     []*ComponentRoute{},
+		Router:          CreateRouter(),
+		wrappers:        []Wrapper{},
+		componentRoutes: []*ComponentRoute{},
 	}
 }
 
@@ -36,8 +42,21 @@ func CreateComponentRouter() *ComponentRouter {
 applies a wrapper to the ComponentRouter so that all subsequently added
 componentRoutes are wrapped with the provided function
 */
-func (c *ComponentRouter) UseWrapperMiddleware(w WrapMiddleware) {
-	c.wrappersMiddlewares = append([]WrapMiddleware{w}, c.wrappersMiddlewares...)
+func (c *ComponentRouter) UseWrapper(w Wrapper) Wrapper {
+	c.wrappers = append([]Wrapper{w}, c.wrappers...)
+	return w
+}
+
+func (c *ComponentRouter) UseWrapFunc(w WrapperFunc) Wrapper {
+	wrapper := createWrapper(w, nil)
+	c.UseWrapper(wrapper)
+	return wrapper
+}
+
+func (c *ComponentRouter) HxWrap(w WrapperFunc) Wrapper {
+	wrapper := hxWrapMiddleware(createWrapper(w, nil))
+	c.UseWrapper(wrapper)
+	return wrapper
 }
 
 /*
@@ -47,24 +66,17 @@ the HX-Request header.
 Does not handle errors
 */
 func (c *ComponentRouter) SimpleWrapper(n SimpleWrapper) {
-	c.UseWrapperMiddleware(MiddlewareFromSimple(n))
+	c.UseWrapper(FromSimple(n))
 }
 
-func (c *ComponentRouter) UseSimpleHxWrapper(n SimpleWrapper) {
-	c.UseHxWrapper(FromSimple(n))
-}
-
-func (c *ComponentRouter) UseHxWrapper(w Wrapper) {
-	c.UseWrapperMiddleware(hxWrapMiddleware)
-	c.UseWrapper(w)
-}
-
-func (c *ComponentRouter) UseWrapper(wrapper Wrapper) {
-	// convert the wrapper to a middleware
-	wrapMiddleware := func(w Wrapper) Wrapper {
-		return wrapper
+func simpleWrapFunc(s SimpleWrapper) WrapperFunc {
+	return func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
+		return s(component), nil
 	}
-	c.wrappersMiddlewares = append([]WrapMiddleware{wrapMiddleware}, c.wrappersMiddlewares...)
+}
+
+func (c *ComponentRouter) SimpleHxWrap(n SimpleWrapper) {
+	c.HxWrap(simpleWrapFunc(n))
 }
 
 /*
@@ -76,7 +88,7 @@ A pointer to the added route is returned so that methods may be chained
 */
 func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, method string) *ComponentRoute {
 	route := &ComponentRoute{
-		wrapperMiddlewares:   c.wrappersMiddlewares,
+		wrappers:             c.wrappers,
 		path:                 path,
 		method:               method,
 		component:            ch,
@@ -113,12 +125,12 @@ The mounted component inherits all the properties of the mounter
 func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRouter) {
 	for _, cr := range subComponent.componentRoutes {
 		c.componentRoutes = append(c.componentRoutes, &ComponentRoute{
-			path:               path + cr.path,
-			method:             cr.method,
-			component:          cr.component,
-			wrapperMiddlewares: append(cr.wrapperMiddlewares, c.wrappersMiddlewares...),
-			middlewares:        append(cr.middlewares, c.middlewares...),
-			// componentErrCatchers: append(cr.componentErrCatchers, c.componentCatchers...),
+			path:                 path + cr.path,
+			method:               cr.method,
+			component:            cr.component,
+			wrappers:             append(cr.wrappers, c.wrappers...),
+			middlewares:          append(cr.middlewares, c.middlewares...),
+			componentErrCatchers: append(cr.componentErrCatchers, c.componentCatchers...),
 		})
 	}
 

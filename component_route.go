@@ -13,9 +13,9 @@ type UnsafeComponentHandler func(w http.ResponseWriter, r *http.Request) templ.C
 type ComponentErrCatcher func(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error)
 
 type ComponentRoute struct {
-	middlewares        []Middleware
-	wrapperMiddlewares []WrapMiddleware
-	// wrappers             []ComponentWrapper
+	middlewares []Middleware
+	// wrapperMiddlewares   []WrapMiddleware
+	wrappers             []Wrapper
 	path                 string
 	method               string
 	component            ComponentHandler
@@ -45,14 +45,6 @@ func (c *ComponentRoute) Use(m Middleware) IComponentRoute {
 
 func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 
-	wrapper := func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
-		return component, nil
-	}
-
-	for _, wm := range c.wrapperMiddlewares {
-		wrapper = wm(wrapper)
-	}
-
 	// create a return handler that:
 	// - creates component
 	// - catches component errors
@@ -79,7 +71,15 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 		}
 
 		// wrap the component
-		component, err = wrapper(w, r, component)
+		for _, wrapper := range c.wrappers {
+			component, err = wrapper.wrap(w, r, component)
+			if err != nil {
+				component, err = wrapper.err(w, r, component, err)
+			}
+			if err != nil {
+				return err
+			}
+		}
 
 		if err != nil {
 			return err

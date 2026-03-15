@@ -119,12 +119,7 @@ func colorsCatcher(w http.ResponseWriter, r *http.Request, err error) (templ.Com
 	return views.DefaultErr(), nil
 }
 
-func WrapPage(w gorouter.Wrapper) gorouter.Wrapper {
-	return func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
-		return Page(w, r, component)
-	}
-}
-
+// type WrapperFunc func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error)
 func Page(w http.ResponseWriter, r *http.Request, content templ.Component) (templ.Component, error) {
 
 	fmt.Println("wrapping page!")
@@ -134,27 +129,30 @@ func Page(w http.ResponseWriter, r *http.Request, content templ.Component) (temp
 	username, ok := usernameResponse.(string)
 
 	if !ok {
-		return nil, fmt.Errorf("username not found")
+		return content, fmt.Errorf("username not found")
 	}
 
 	return views.Page(content, username), nil
-
 }
 
-// func UsernameWrapper(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error) {
-//
-// }
+func PageCatcher(w http.ResponseWriter, r *http.Request, component templ.Component, err error) (templ.Component, error) {
+	fmt.Printf("caught page err = %s\n", err)
+	if err.Error() == "username not found" {
+		return views.Page(component, "user not found"), nil
+	}
+
+	return component, err
+}
 
 func main() {
 	app := gorouter.CreateApp()
 	app.Use(loggerOne)
-	app.Use(userMiddleware)
-	app.UseHxWrapper(Page)
+	app.HxWrap(Page).Catch(PageCatcher)
 	app.GetComponent("/", handleRoot)
 	app.GetComponent("/hi", handleHi)
 
 	colorsPage := gorouter.CreateComponentRouter()
-	colorsPage.UseSimpleHxWrapper(views.ColorsPage)
+	colorsPage.SimpleHxWrap(views.ColorsPage)
 	colorsPage.Use(logUsernameMiddleware)
 
 	colorsPage.Use(loggerTwo)
@@ -165,7 +163,7 @@ func main() {
 	colorsPage.GetComponent("/green", handleRed).Catch(catchRedError)
 
 	numbersPage := gorouter.CreateComponentRouter()
-	numbersPage.UseSimpleHxWrapper(views.ColorsPage)
+	numbersPage.SimpleHxWrap(views.ColorsPage)
 	numbersPage.GetComponent("/one", gorouter.UnsafeComponent(handleOne))
 	numbersPage.GetComponent("/two", gorouter.UnsafeComponent(handleTwo))
 
