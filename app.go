@@ -1,10 +1,17 @@
 package gorouter
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/a-h/templ"
+)
+
+type baseWrapper func(component templ.Component, scripts ...string) templ.Component
 
 type App struct {
 	mux *http.ServeMux
 	*ComponentRouter
+	baseWrapper baseWrapper
 }
 
 func CreateApp() *App {
@@ -12,6 +19,20 @@ func CreateApp() *App {
 		mux:             http.NewServeMux(),
 		ComponentRouter: CreateComponentRouter(),
 	}
+}
+
+func (a *App) UseBaseWrapper(bw baseWrapper) {
+	a.baseWrapper = bw
+}
+
+func (a *App) UseStaticDir(dir string) {
+
+	// Create a file server handler
+	handler := http.StripPrefix("/static/", http.FileServer(http.Dir(dir)))
+
+	// Handle requests at the root URL ("/") using the file server
+	// http.Handle("/", handler)
+	a.mux.Handle("/static/", handler)
 }
 
 // applies the apps routes to the apps mux
@@ -24,7 +45,7 @@ func (a *App) applyRoutes() {
 
 	// handle component routes with path
 	for _, route := range a.componentRoutes {
-		a.mux.Handle(route.path, route.HTTPHandler())
+		a.mux.Handle(route.path, route.HTTPHandler(a.baseWrapper))
 	}
 }
 

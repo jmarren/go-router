@@ -18,6 +18,7 @@ var NumbersPage *gorouter.ComponentRouter
 
 func init() {
 	NumbersPage = gorouter.CreateComponentRouter()
+	NumbersPage.UseScripts("/static/numbers.js")
 	NumbersPage.SimpleHxWrap(views.NumbersNester)
 	NumbersPage.GetComponent("/one", gorouter.UnsafeComponent(handleOne))
 	NumbersPage.GetComponent("/two", gorouter.UnsafeComponent(handleTwo))

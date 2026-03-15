@@ -25,15 +25,22 @@ type ComponentRouter struct {
 		catch errors returned by component handlers
 	*/
 	componentCatchers []ComponentErrCatcher
+
+	scripts []string
 }
 
 /* creates an empty ComponentRouter */
 func CreateComponentRouter() *ComponentRouter {
 	return &ComponentRouter{
+		scripts:         []string{},
 		Router:          CreateRouter(),
 		wrappers:        []Wrapper{},
 		componentRoutes: []*ComponentRoute{},
 	}
+}
+
+func (c *ComponentRouter) UseScripts(src ...string) {
+	c.scripts = append(c.scripts, src...)
 }
 
 /*
@@ -97,6 +104,7 @@ func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, me
 		component:            ch,
 		middlewares:          c.middlewares,
 		componentErrCatchers: c.componentCatchers,
+		scripts:              c.scripts,
 	}
 
 	c.componentRoutes = append(c.componentRoutes, route)
@@ -134,6 +142,7 @@ func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRoute
 			wrappers:             append(cr.wrappers, c.wrappers...),
 			middlewares:          append(cr.middlewares, c.middlewares...),
 			componentErrCatchers: append(cr.componentErrCatchers, c.componentCatchers...),
+			scripts:              append(cr.scripts, c.scripts...),
 		})
 	}
 

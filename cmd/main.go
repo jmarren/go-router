@@ -50,9 +50,14 @@ func pageCatcher(rw gorouter.RW, component templ.Component, err error) (templ.Co
 
 func main() {
 	app := gorouter.CreateApp()
+	app.UseStaticDir("./static")
+
+	app.UseBaseWrapper(views.Base)
+	// app.UseScripts("/static/index.js")
+
 	app.Use(middleware.Logger)
 	// simple wrap the base component
-	app.SimpleHxWrap(views.Base)
+	// app.SimpleHxWrap(views.Base)
 	// hx-wrap the Page function and catch errors with the PageCatcher
 	app.HxWrap(Page).Catch(pageCatcher)
 	app.GetComponent("/", handleRoot)

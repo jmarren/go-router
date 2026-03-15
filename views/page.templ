@@ -1,21 +1,11 @@
 package views
 
 
-templ Base(content templ.Component) {
-	
+templ Base(content templ.Component, scripts ...string) {
 	<!DOCTYPE html>
 	<html>
-		<head> 
-    			<link rel="stylesheet" href="/public/styles.css">
-			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
-			<style>
-				#container {
-					border: 2px solid black;
-				}
-			</style>
-		</head>
-
-		<body hx-boost="true">
+		@Head(scripts)
+		<body hx-boost="true" hx-ext="head-support">
 		@content
 		</body>
 	</html>

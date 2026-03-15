@@ -1,9 +1,11 @@
 package gorouter
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/a-h/templ"
+	"github.com/jmarren/go-router/views"
 )
 
 type ComponentHandler func(rw RW) (templ.Component, error)
@@ -19,6 +21,7 @@ type ComponentRoute struct {
 	method               string
 	component            ComponentHandler
 	componentErrCatchers []ComponentErrCatcher
+	scripts              []string
 }
 
 type IComponentRoute interface {
@@ -42,7 +45,16 @@ func (c *ComponentRoute) Use(m Middleware) IComponentRoute {
 	return c
 }
 
-func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
+func (c *ComponentRoute) UseScripts(srcs ...string) {
+	fmt.Printf("using script = %s\n", srcs)
+	c.scripts = append(c.scripts, srcs...)
+}
+
+func (c *ComponentRoute) head() templ.Component {
+	return views.WrapHead(views.ScriptHead(c.scripts...))
+}
+
+func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 
 	// create a return handler that:
 	// - creates component
@@ -50,10 +62,6 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 	// - nests component
 	// - renders component
 	handler := func(rw RW) error {
-		// rw := RW{
-		// 	ResponseWriter: w,
-		// 	Request:        r,
-		// }
 
 		// create the component using the componentHandler
 		component, err := c.component(rw)
@@ -89,6 +97,12 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 
 		if err != nil {
 			return err
+		}
+
+		if rw.Request.Header.Get("HX-Request") != "true" {
+			component = baseWrapper(component, c.scripts...)
+		} else {
+			component = templ.Join(component, c.head())
 		}
 
 		// render
