@@ -1,8 +1,8 @@
 package views
 
 
-
-templ Page(content templ.Component, username string) {
+templ Base(content templ.Component) {
+	
 	<!DOCTYPE html>
 	<html>
 		<head> 
@@ -16,12 +16,16 @@ templ Page(content templ.Component, username string) {
 		</head>
 
 		<body hx-boost="true">
-		<div>username: { username }</div>
-			@content
-			<div id="side-panel"></div>
-			<div>app</div>
-			<button hx-get="/components/side-panel"></button>
+		@content
 		</body>
-
 	</html>
+}
+
+
+templ Page(content templ.Component, username string) {
+		<div>username: { username }</div>
+		@content
+		<div id="side-panel"></div>
+		<div>app</div>
+		<button hx-get="/components/side-panel"></button>
 }

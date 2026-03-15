@@ -1,21 +1,19 @@
 package gorouter
 
 import (
-	"net/http"
-
 	"github.com/a-h/templ"
 )
 
-type WrapperErrFunc func(w http.ResponseWriter, r *http.Request, component templ.Component, err error) (templ.Component, error)
+type WrapperErrFunc func(rw RW, component templ.Component, err error) (templ.Component, error)
 
 type Wrapper interface {
-	wrap(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error)
-	err(w http.ResponseWriter, r *http.Request, component templ.Component, err error) (templ.Component, error)
+	wrap(rw RW, component templ.Component) (templ.Component, error)
+	err(rw RW, component templ.Component, err error) (templ.Component, error)
 	Catch(errFunc WrapperErrFunc) Wrapper
 	Use(m WrapFuncMiddleware) Wrapper
 }
 
-type WrapperFunc func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error)
+type WrapperFunc func(rw RW, component templ.Component) (templ.Component, error)
 
 type wrapper struct {
 	wrapperFunc WrapperFunc
@@ -27,12 +25,12 @@ func (wr *wrapper) Use(m WrapFuncMiddleware) Wrapper {
 	return wr
 }
 
-func (wr *wrapper) wrap(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
-	return wr.wrapperFunc(w, r, component)
+func (wr *wrapper) wrap(rw RW, component templ.Component) (templ.Component, error) {
+	return wr.wrapperFunc(rw, component)
 }
 
-func (wr *wrapper) err(w http.ResponseWriter, r *http.Request, component templ.Component, err error) (templ.Component, error) {
-	return wr.errFunc(w, r, component, err)
+func (wr *wrapper) err(rw RW, component templ.Component, err error) (templ.Component, error) {
+	return wr.errFunc(rw, component, err)
 }
 
 func (wr *wrapper) Catch(errFunc WrapperErrFunc) Wrapper {
@@ -41,11 +39,11 @@ func (wr *wrapper) Catch(errFunc WrapperErrFunc) Wrapper {
 	curr := wr.errFunc
 
 	// update the errFunc to try using the new errFunc first
-	wr.errFunc = func(w http.ResponseWriter, r *http.Request, component templ.Component, err error) (templ.Component, error) {
+	wr.errFunc = func(rw RW, component templ.Component, err error) (templ.Component, error) {
 		// use the new errFunc
-		component, err = errFunc(w, r, component, err)
+		component, err = errFunc(rw, component, err)
 		if err != nil {
-			return curr(w, r, component, err)
+			return curr(rw, component, err)
 		}
 		return component, err
 	}
@@ -53,7 +51,7 @@ func (wr *wrapper) Catch(errFunc WrapperErrFunc) Wrapper {
 	return wr
 }
 
-func unsafeErr(w http.ResponseWriter, r *http.Request, component templ.Component, err error) (templ.Component, error) {
+func unsafeErr(rw RW, component templ.Component, err error) (templ.Component, error) {
 	return component, err
 }
 
@@ -80,11 +78,11 @@ type WrapFuncMiddleware func(w WrapperFunc) WrapperFunc
 // converts a SimpleWrapper into a Wrapper that returns a nil error
 func FromSimple(s SimpleWrapper) Wrapper {
 	// create default functions
-	wrapperFunc := func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
+	wrapperFunc := func(rw RW, component templ.Component) (templ.Component, error) {
 		return s(component), nil
 	}
 
-	errFunc := func(w http.ResponseWriter, r *http.Request, component templ.Component, err error) (templ.Component, error) {
+	errFunc := func(rw RW, component templ.Component, err error) (templ.Component, error) {
 		return component, err
 	}
 	return createWrapper(wrapperFunc, errFunc)
@@ -98,15 +96,13 @@ func FromSimple(s SimpleWrapper) Wrapper {
 // }
 
 // applies the wrapper only if not an hx-request
-func hxWrapMiddleware(wr Wrapper) Wrapper {
-	return &wrapper{
-		wrapperFunc: func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
-			if r.Header.Get("HX-Request") == "true" {
-				return component, nil
-			}
-			return wr.wrap(w, r, component)
-		},
-		errFunc: wr.err,
+func hxWrapMiddleware(wr WrapperFunc) WrapperFunc {
+	return func(rw RW, component templ.Component) (templ.Component, error) {
+
+		if rw.Request.Header.Get("HX-Request") == "true" {
+			return component, nil
+		}
+		return wr(rw, component)
 	}
 }
 

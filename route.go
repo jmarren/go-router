@@ -5,9 +5,14 @@ import (
 	"net/http"
 )
 
-type ErrCatcher func(w http.ResponseWriter, r *http.Request, err error) error
+type RW struct {
+	http.ResponseWriter
+	*http.Request
+}
 
-type Handler func(w http.ResponseWriter, r *http.Request) error
+type ErrCatcher func(rw RW, err error) error
+
+type Handler func(rw RW) error
 
 type Route struct {
 	path        string
@@ -34,13 +39,19 @@ func (r *Route) HTTPHandler() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, req *http.Request) {
-		err := handler(w, req)
+
+		rw := RW{
+			ResponseWriter: w,
+			Request:        req,
+		}
+
+		err := handler(rw)
 
 		fmt.Printf("num catchers = %d\n", len(r.catchers))
 
 		if err != nil {
 			for _, catcher := range r.catchers {
-				err = catcher(w, req, err)
+				err = catcher(rw, err)
 				if err == nil {
 					break
 				}

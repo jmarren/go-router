@@ -1,8 +1,6 @@
 package gorouter
 
 import (
-	"net/http"
-
 	"github.com/a-h/templ"
 )
 
@@ -47,14 +45,19 @@ func (c *ComponentRouter) UseWrapper(w Wrapper) Wrapper {
 	return w
 }
 
+// creates a wrapper with empty err handler and adds it to components wrappers,
+// then returns it
 func (c *ComponentRouter) UseWrapFunc(w WrapperFunc) Wrapper {
 	wrapper := createWrapper(w, nil)
 	c.UseWrapper(wrapper)
 	return wrapper
 }
 
+// creates a wrapper with empty err handler,
+// applies the hxWrapMiddleware to it,
+// then returns it
 func (c *ComponentRouter) HxWrap(w WrapperFunc) Wrapper {
-	wrapper := hxWrapMiddleware(createWrapper(w, nil))
+	wrapper := createWrapper(w, nil).Use(hxWrapMiddleware)
 	c.UseWrapper(wrapper)
 	return wrapper
 }
@@ -70,7 +73,7 @@ func (c *ComponentRouter) SimpleWrapper(n SimpleWrapper) {
 }
 
 func simpleWrapFunc(s SimpleWrapper) WrapperFunc {
-	return func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error) {
+	return func(rw RW, component templ.Component) (templ.Component, error) {
 		return s(component), nil
 	}
 }

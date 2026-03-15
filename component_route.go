@@ -6,15 +6,14 @@ import (
 	"github.com/a-h/templ"
 )
 
-type ComponentHandler func(w http.ResponseWriter, r *http.Request) (templ.Component, error)
+type ComponentHandler func(rw RW) (templ.Component, error)
 
-type UnsafeComponentHandler func(w http.ResponseWriter, r *http.Request) templ.Component
+type UnsafeComponentHandler func(rw RW) templ.Component
 
-type ComponentErrCatcher func(w http.ResponseWriter, r *http.Request, err error) (templ.Component, error)
+type ComponentErrCatcher func(rw RW, err error) (templ.Component, error)
 
 type ComponentRoute struct {
-	middlewares []Middleware
-	// wrapperMiddlewares   []WrapMiddleware
+	middlewares          []Middleware
 	wrappers             []Wrapper
 	path                 string
 	method               string
@@ -28,8 +27,8 @@ type IComponentRoute interface {
 }
 
 func UnsafeComponent(unsafeHandler UnsafeComponentHandler) ComponentHandler {
-	return func(w http.ResponseWriter, r *http.Request) (templ.Component, error) {
-		return unsafeHandler(w, r), nil
+	return func(rw RW) (templ.Component, error) {
+		return unsafeHandler(rw), nil
 	}
 }
 
@@ -50,16 +49,20 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 	// - catches component errors
 	// - nests component
 	// - renders component
-	handler := func(w http.ResponseWriter, r *http.Request) error {
+	handler := func(rw RW) error {
+		// rw := RW{
+		// 	ResponseWriter: w,
+		// 	Request:        r,
+		// }
 
 		// create the component using the componentHandler
-		component, err := c.component(w, r)
+		component, err := c.component(rw)
 
 		// if an error occurs,
 		// apply catchers until it is resolved to nil
 		if err != nil {
 			for _, catcher := range c.componentErrCatchers {
-				component, err = catcher(w, r, err)
+				component, err = catcher(rw, err)
 				if err == nil {
 					break
 				}
@@ -72,10 +75,13 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 
 		// wrap the component
 		for _, wrapper := range c.wrappers {
-			component, err = wrapper.wrap(w, r, component)
+			// attempt to wrap
+			component, err = wrapper.wrap(rw, component)
+			// if an err is returned attempt to resolve with err method
 			if err != nil {
-				component, err = wrapper.err(w, r, component, err)
+				component, err = wrapper.err(rw, component, err)
 			}
+			// if error is unresolved, return it
 			if err != nil {
 				return err
 			}
@@ -86,7 +92,7 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 		}
 
 		// render
-		component.Render(r.Context(), w)
+		component.Render(rw.Request.Context(), rw.ResponseWriter)
 
 		return nil
 	}
@@ -98,7 +104,10 @@ func (c *ComponentRoute) HTTPHandler() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := handler(w, r)
+		err := handler(RW{
+			Request:        r,
+			ResponseWriter: w,
+		})
 		if err != nil {
 			panic(err)
 		}
