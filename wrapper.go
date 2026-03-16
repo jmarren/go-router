@@ -14,14 +14,12 @@ type WrapMiddleware func(w WrapperFunc) WrapperFunc
 
 type Wrapper interface {
 	wrapperFunc() func(rw *RW, component templ.Component) (templ.Component, error)
-	// err(rw *RW, component templ.Component, err error) (templ.Component, error)
 	Catch(errFunc WrapperErrFunc) Wrapper
 	Use(m WrapMiddleware) Wrapper
 	UseFunc(w WrapperFunc) Wrapper
 }
 
 type wrapper struct {
-	// middleware []WrapMiddleware
 	wrapFunc WrapperFunc
 	errFunc  WrapperErrFunc
 }

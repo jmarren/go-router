@@ -71,8 +71,8 @@ func main() {
 	// simple wrap the base component
 	// app.SimpleHxWrap(views.Base)
 	// hx-wrap the Page function and catch errors with the PageCatcher
-	app.HxWrap()
 	app.Wrapper().UseFunc(Page).Catch(pageCatcher)
+	app.HxWrap()
 	app.GetComponent("/", handleRoot)
 	app.GetComponent("/hi", handleHi)
 
