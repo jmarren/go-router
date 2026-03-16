@@ -91,7 +91,7 @@ func (c *ComponentRoute) triggersJson() string {
 		return ""
 	}
 
-	// create a map to can marshal into json properly
+	// create a map to marshal into json properly
 	triggerMap := map[string]string{}
 
 	for _, trigger := range c.triggers {
@@ -172,8 +172,8 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 
 	// apply middlewares to the created handler
 	// (they will execute before the handler at runtime)
-	for i := 0; i < len(c.middlewares); i++ {
-		handler = c.middlewares[i](handler)
+	for _, m := range c.middlewares {
+		handler = m(handler)
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

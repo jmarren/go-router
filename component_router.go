@@ -1,11 +1,5 @@
 package gorouter
 
-import (
-	"fmt"
-
-	"github.com/a-h/templ"
-)
-
 /* A router that serves components */
 type ComponentRouter struct {
 	/*
@@ -21,7 +15,7 @@ type ComponentRouter struct {
 		a slice of all the wrappers that will wrap components served
 		by the router
 	*/
-	wrappers []Wrapper
+	wrapper Wrapper
 	/*
 		a slice of all the componentCatchers that will
 		catch errors returned by component handlers
@@ -31,6 +25,10 @@ type ComponentRouter struct {
 	scripts []string
 
 	triggers []Trigger
+
+	path string
+
+	prefixWrap bool
 }
 
 /* creates an empty ComponentRouter */
@@ -38,14 +36,13 @@ func CreateComponentRouter() *ComponentRouter {
 	return &ComponentRouter{
 		scripts:         []string{},
 		Router:          CreateRouter(),
-		wrappers:        []Wrapper{},
+		wrapper:         defaultWrapper(),
 		componentRoutes: []*ComponentRoute{},
 		triggers:        []Trigger{},
 	}
 }
 
 func (c *ComponentRouter) Trigger(event, message string) *ComponentRouter {
-	fmt.Printf("adding trigger to router = %s: %s\n", event, message)
 	c.triggers = append(c.triggers, Trigger{
 		event,
 		message,
@@ -62,63 +59,35 @@ func (c *ComponentRouter) UseScripts(src ...string) *ComponentRouter {
 applies a wrapper to the ComponentRouter so that all subsequently added
 componentRoutes are wrapped with the provided function
 */
-func (c *ComponentRouter) UseWrapper(w Wrapper) Wrapper {
-	c.wrappers = append([]Wrapper{w}, c.wrappers...)
-	return w
-}
-
-// creates a wrapper with empty err handler and adds it to components wrappers,
-// then returns it
-func (c *ComponentRouter) UseWrapFunc(w WrapperFunc) Wrapper {
-	wrapper := createWrapper(w, nil)
-	c.UseWrapper(wrapper)
-	return wrapper
+func (c *ComponentRouter) UseWrapper(w WrapperFunc) Wrapper {
+	c.wrapper.Use(w)
+	return c.wrapper
 }
 
 // wraps the component using the provided wrapperFunc only if the
 // current url of the request does not contain the provided subpath string
-func (c *ComponentRouter) PrefixWrap(subPath string, w WrapperFunc) Wrapper {
-	wrapperFunc := func(rw *RW, component templ.Component) (templ.Component, error) {
-		if rw.PathHasPrefix(subPath) {
-			return component, nil
-		}
-
-		return w(rw, component)
-	}
-	wrapper := createWrapper(wrapperFunc, nil)
-	c.UseWrapper(wrapper)
-	return wrapper
-}
+// func (c *ComponentRouter) PrefixWrap(subPath string, w WrapperFunc) Wrapper {
+// 	wrapperFunc := func(rw *RW, component templ.Component) (templ.Component, error) {
+//
+// 		if rw.PathHasPrefix(subPath) {
+// 			return component, nil
+// 		}
+//
+// 		return w(rw, component)
+// 	}
+//
+// 	c.wrapper.Use(wrapperFunc)
+// 	return c.wrapper
+// }
 
 // creates a wrapper with empty err handler,
 // applies the hxWrapMiddleware to it,
 // then returns it
 func (c *ComponentRouter) HxWrap(w WrapperFunc) Wrapper {
-	wrapper := createWrapper(w, nil).Use(hxWrapMiddleware)
-	c.UseWrapper(wrapper)
-	return wrapper
+	c.wrapper.Use(w)
+	return c.wrapper
 }
 
-/*
-applies the unsafeHxWrapper so that wrapping occurs if the request has
-the HX-Request header.
-
-Does not handle errors
-*/
-// func (c *ComponentRouter) SimpleWrapper(n SimpleWrapper) {
-// 	c.UseWrapper(FromSimple(n))
-// }
-
-// func simpleWrapFunc(s SimpleWrapper) WrapperFunc {
-// 	return func(rw *RW, component templ.Component) (templ.Component, error) {
-// 		return s(component), nil
-// 	}
-// }
-
-// func (c *ComponentRouter) SimpleHxWrap(n SimpleWrapper) {
-// 	c.HxWrap(simpleWrapFunc(n))
-// }
-//
 /*
 Adds a new componentHandler to the routers routes with the provided path and method
 
@@ -129,7 +98,7 @@ A pointer to the added route is returned so that methods may be chained
 func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, method string) *ComponentRoute {
 
 	route := &ComponentRoute{
-		wrappers:             c.wrappers,
+		wrappers:             []Wrapper{c.wrapper},
 		path:                 path,
 		method:               method,
 		component:            ch,
@@ -167,13 +136,14 @@ The SubComponent method mounts another component router onto this one.
 The mounted component inherits all the properties of the mounter
 */
 func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRouter) {
+
 	for _, cr := range subComponent.componentRoutes {
 
 		newRoute := &ComponentRoute{
 			path:                 path + cr.path,
 			method:               cr.method,
 			component:            cr.component,
-			wrappers:             append(cr.wrappers, c.wrappers...),
+			wrappers:             append(cr.wrappers, c.wrapper),
 			middlewares:          append(cr.middlewares, c.middlewares...),
 			componentErrCatchers: append(cr.componentErrCatchers, c.componentCatchers...),
 			scripts:              append(cr.scripts, c.scripts...),

@@ -6,27 +6,37 @@ import (
 
 type WrapperErrFunc func(rw *RW, component templ.Component, err error) (templ.Component, error)
 
-type Wrapper interface {
-	wrap(rw *RW, component templ.Component) (templ.Component, error)
-	err(rw *RW, component templ.Component, err error) (templ.Component, error)
-	Catch(errFunc WrapperErrFunc) Wrapper
-	Use(m WrapFuncMiddleware) Wrapper
-}
-
 type WrapperFunc func(rw *RW, component templ.Component) (templ.Component, error)
 
-type wrapper struct {
-	wrapperFunc WrapperFunc
-	errFunc     WrapperErrFunc
+type WrapMiddleware func(w WrapperFunc) WrapperFunc
+
+type Wrapper interface {
+	wrapperFunc() func(rw *RW, component templ.Component) (templ.Component, error)
+	err(rw *RW, component templ.Component, err error) (templ.Component, error)
+	Catch(errFunc WrapperErrFunc) Wrapper
+	Use(m WrapMiddleware) Wrapper
 }
 
-func (wr *wrapper) Use(m WrapFuncMiddleware) Wrapper {
-	wr.wrapperFunc = m(wr.wrapperFunc)
+type wrapper struct {
+	middleware []WrapMiddleware
+	wrapFunc   WrapperFunc
+	errFunc    WrapperErrFunc
+}
+
+func (wr *wrapper) Use(fn WrapMiddleware) Wrapper {
+	wr.middleware = append([]WrapMiddleware{fn}, wr.middleware...)
 	return wr
 }
 
-func (wr *wrapper) wrap(rw *RW, component templ.Component) (templ.Component, error) {
-	return wr.wrapperFunc(rw, component)
+func (wr *wrapper) wrapperFunc() func(rw *RW, component templ.Component) (templ.Component, error) {
+
+	wrapFunc := wr.wrapFunc
+
+	for _, m := range wr.middleware {
+		wrapFunc = m(wrapFunc)
+	}
+
+	return wrapFunc
 }
 
 func (wr *wrapper) err(rw *RW, component templ.Component, err error) (templ.Component, error) {
@@ -55,15 +65,37 @@ func unsafeErr(rw *RW, component templ.Component, err error) (templ.Component, e
 	return component, err
 }
 
-func createWrapper(wrapperFunc WrapperFunc, errFunc WrapperErrFunc) Wrapper {
+func defaultWrapFunc(rw *RW, component templ.Component) (templ.Component, error) {
+	return component, nil
+}
 
-	if errFunc == nil {
-		errFunc = unsafeErr
-	}
-
+func newWrapper() Wrapper {
 	return &wrapper{
-		wrapperFunc,
-		errFunc,
+		wrapFunc:   defaultWrapFunc,
+		middleware: []WrapMiddleware{},
+		errFunc:    unsafeErr,
+	}
+}
+
+// func createWrapper(wrapperFunc WrapperFunc, errFunc WrapperErrFunc) Wrapper {
+//
+// 	wrapper := defaultWrapper()
+//
+// 	wrapper.Use(wrapperFunc)
+//
+// 	if errFunc != nil {
+// 		wrapper.Catch(errFunc)
+// 	}
+//
+// 	return wrapper
+//
+// }
+
+func defaultWrapper() Wrapper {
+	return &wrapper{
+		wrapFunc:   defaultWrapFunc,
+		middleware: []WrapMiddleware{},
+		errFunc:    unsafeErr,
 	}
 }
 
@@ -74,8 +106,6 @@ func createWrapper(wrapperFunc WrapperFunc, errFunc WrapperErrFunc) Wrapper {
 // any function that takes in a req, res, and component and returns a templ component
 // this is used for wrapping subcomponents
 // type Wrapper func(w http.ResponseWriter, r *http.Request, component templ.Component) (templ.Component, error)
-
-type WrapMiddleware func(w Wrapper) Wrapper
 
 type WrapFuncMiddleware func(w WrapperFunc) WrapperFunc
 
@@ -95,7 +125,11 @@ func FromSimple(s func(c templ.Component) templ.Component) Wrapper {
 	errFunc := func(rw *RW, component templ.Component, err error) (templ.Component, error) {
 		return component, err
 	}
-	return createWrapper(wrapperFunc, errFunc)
+	return &wrapper{
+		wrapFunc:   wrapperFunc,
+		errFunc:    errFunc,
+		middleware: []WrapMiddleware{},
+	}
 }
 
 // // converts a SimpleWrapper into a WrapMiddleware
