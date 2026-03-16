@@ -2,6 +2,8 @@ package views
 
 templ NumbersNester(c templ.Component) {
 	<div id="container">
+		<button id="fun-button">fun</button>
+		<a href="/colors/red" hx-target="#container">red</a>
 		<div>numbers</div>
 		@c
 	</div>
@@ -9,15 +11,15 @@ templ NumbersNester(c templ.Component) {
 
 
 templ One() {
-	<div id="number">
+	<div class="number" id="one" >
 		<div>the number is 1!</div>
-		<a href="/numbers/two" hx-target="#number">2</a>
+		<a href="/numbers/two" hx-target="#one">2</a>
 	</div>
 }
 
 templ Two() {
-	<div id="number">
+	<div class="number" id="two">
 		<div>the number is 2!</div>
-		<a href="/numbers/one" hx-target="#number">1</a>
+		<a href="/numbers/one" hx-target="#two">1</a>
 	</div>
 }

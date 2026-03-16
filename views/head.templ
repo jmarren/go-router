@@ -27,7 +27,7 @@ templ Head(scripts []string) {
 
 templ ScriptHead(srcs ...string) {
 	for _, src := range srcs {
-		<script hx-preserve="true" src={ src }></script>		
+		<script hx-preserve="true" defer src={ "/static/" + src }></script>		
 	}
 }
 

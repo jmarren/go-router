@@ -3,7 +3,12 @@ package views
 templ ColorsPage(c templ.Component) {
 	
 	<div id="container">
+		<a href="/numbers/one" hx-target="#container">one</a>
 		<h1>colors</h1>
 		@c
 	</div>
+}
+
+templ Yellow() {
+	<div>yellow</div>
 }

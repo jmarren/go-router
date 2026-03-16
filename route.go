@@ -1,7 +1,6 @@
 package gorouter
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -10,9 +9,13 @@ type RW struct {
 	*http.Request
 }
 
-type ErrCatcher func(rw RW, err error) error
+func (rw *RW) IsHxRequest() bool {
+	return rw.Request.Header.Get("HX-Request") == "true"
+}
 
-type Handler func(rw RW) error
+type ErrCatcher func(rw *RW, err error) error
+
+type Handler func(rw *RW) error
 
 type Route struct {
 	path        string
@@ -40,14 +43,12 @@ func (r *Route) HTTPHandler() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 
-		rw := RW{
+		rw := &RW{
 			ResponseWriter: w,
 			Request:        req,
 		}
 
 		err := handler(rw)
-
-		fmt.Printf("num catchers = %d\n", len(r.catchers))
 
 		if err != nil {
 			for _, catcher := range r.catchers {

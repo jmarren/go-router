@@ -1,6 +1,8 @@
 package gorouter
 
 import (
+	"fmt"
+
 	"github.com/a-h/templ"
 )
 
@@ -27,6 +29,8 @@ type ComponentRouter struct {
 	componentCatchers []ComponentErrCatcher
 
 	scripts []string
+
+	triggers []Trigger
 }
 
 /* creates an empty ComponentRouter */
@@ -36,11 +40,22 @@ func CreateComponentRouter() *ComponentRouter {
 		Router:          CreateRouter(),
 		wrappers:        []Wrapper{},
 		componentRoutes: []*ComponentRoute{},
+		triggers:        []Trigger{},
 	}
 }
 
-func (c *ComponentRouter) UseScripts(src ...string) {
+func (c *ComponentRouter) Trigger(event, message string) *ComponentRouter {
+	fmt.Printf("adding trigger to router = %s: %s\n", event, message)
+	c.triggers = append(c.triggers, Trigger{
+		event,
+		message,
+	})
+	return c
+}
+
+func (c *ComponentRouter) UseScripts(src ...string) *ComponentRouter {
 	c.scripts = append(c.scripts, src...)
+	return c
 }
 
 /*
@@ -80,7 +95,7 @@ func (c *ComponentRouter) SimpleWrapper(n SimpleWrapper) {
 }
 
 func simpleWrapFunc(s SimpleWrapper) WrapperFunc {
-	return func(rw RW, component templ.Component) (templ.Component, error) {
+	return func(rw *RW, component templ.Component) (templ.Component, error) {
 		return s(component), nil
 	}
 }
@@ -97,6 +112,7 @@ The newly added route inherits the properties of the router (middlewares, catche
 A pointer to the added route is returned so that methods may be chained
 */
 func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, method string) *ComponentRoute {
+
 	route := &ComponentRoute{
 		wrappers:             c.wrappers,
 		path:                 path,
@@ -105,6 +121,7 @@ func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, me
 		middlewares:          c.middlewares,
 		componentErrCatchers: c.componentCatchers,
 		scripts:              c.scripts,
+		triggers:             c.triggers,
 	}
 
 	c.componentRoutes = append(c.componentRoutes, route)
@@ -135,7 +152,8 @@ The mounted component inherits all the properties of the mounter
 */
 func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRouter) {
 	for _, cr := range subComponent.componentRoutes {
-		c.componentRoutes = append(c.componentRoutes, &ComponentRoute{
+
+		newRoute := &ComponentRoute{
 			path:                 path + cr.path,
 			method:               cr.method,
 			component:            cr.component,
@@ -143,7 +161,11 @@ func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRoute
 			middlewares:          append(cr.middlewares, c.middlewares...),
 			componentErrCatchers: append(cr.componentErrCatchers, c.componentCatchers...),
 			scripts:              append(cr.scripts, c.scripts...),
-		})
+			triggers:             append(cr.triggers, c.triggers...),
+		}
+		// copy from c to cr so that component triggers overwrite router triggers on conflict
+		c.componentRoutes = append(c.componentRoutes, newRoute)
+
 	}
 
 	// add the subComponents regular router as a subroute as well

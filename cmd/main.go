@@ -11,7 +11,7 @@ import (
 	"github.com/jmarren/go-router/views"
 )
 
-func handleRoot(rw gorouter.RW) (templ.Component, error) {
+func handleRoot(rw *gorouter.RW) (templ.Component, error) {
 	return views.Home(), nil
 }
 
@@ -20,11 +20,11 @@ func SayHi(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func handleHi(rw gorouter.RW) (templ.Component, error) {
+func handleHi(rw *gorouter.RW) (templ.Component, error) {
 	return views.Hi(), nil
 }
 
-func Page(rw gorouter.RW, content templ.Component) (templ.Component, error) {
+func Page(rw *gorouter.RW, content templ.Component) (templ.Component, error) {
 
 	fmt.Println("wrapping page!")
 
@@ -39,7 +39,7 @@ func Page(rw gorouter.RW, content templ.Component) (templ.Component, error) {
 	return views.Page(content, username), nil
 }
 
-func pageCatcher(rw gorouter.RW, component templ.Component, err error) (templ.Component, error) {
+func pageCatcher(rw *gorouter.RW, component templ.Component, err error) (templ.Component, error) {
 	fmt.Printf("caught page err = %s\n", err)
 	if err.Error() == "username not found" {
 		return views.Page(component, "user not found"), nil

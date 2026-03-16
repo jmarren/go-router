@@ -7,7 +7,7 @@ import (
 )
 
 func Logger(h gorouter.Handler) gorouter.Handler {
-	return func(rw gorouter.RW) error {
+	return func(rw *gorouter.RW) error {
 		fmt.Println(rw.Method + " " + rw.URL.Path)
 		return h(rw)
 	}
