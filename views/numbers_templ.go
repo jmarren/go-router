@@ -29,7 +29,7 @@ func NumbersNester(c templ.Component) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"container\"><button id=\"fun-button\">fun</button> <a href=\"/colors/red\" hx-target=\"#container\">red</a><div>numbers</div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"container\"><div id=\"hi-container\"></div><button id=\"say-hi\" hx-get=\"/numbers/say-hi\" hx-target=\"#hi-container\">say hi!</button> <button id=\"fun-button\">fun</button> <a href=\"/colors/red\" hx-target=\"#container\">red</a><div>numbers</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

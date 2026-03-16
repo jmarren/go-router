@@ -77,9 +77,9 @@ func (c *ComponentRouter) UseWrapFunc(w WrapperFunc) Wrapper {
 
 // wraps the component using the provided wrapperFunc only if the
 // current url of the request does not contain the provided subpath string
-func (c *ComponentRouter) WrapWithoutSubpath(subPath string, w WrapperFunc) Wrapper {
+func (c *ComponentRouter) PrefixWrap(subPath string, w WrapperFunc) Wrapper {
 	wrapperFunc := func(rw *RW, component templ.Component) (templ.Component, error) {
-		if rw.ContainsSubPath(subPath) {
+		if rw.PathHasPrefix(subPath) {
 			return component, nil
 		}
 
@@ -105,20 +105,20 @@ the HX-Request header.
 
 Does not handle errors
 */
-func (c *ComponentRouter) SimpleWrapper(n SimpleWrapper) {
-	c.UseWrapper(FromSimple(n))
-}
+// func (c *ComponentRouter) SimpleWrapper(n SimpleWrapper) {
+// 	c.UseWrapper(FromSimple(n))
+// }
 
-func simpleWrapFunc(s SimpleWrapper) WrapperFunc {
-	return func(rw *RW, component templ.Component) (templ.Component, error) {
-		return s(component), nil
-	}
-}
+// func simpleWrapFunc(s SimpleWrapper) WrapperFunc {
+// 	return func(rw *RW, component templ.Component) (templ.Component, error) {
+// 		return s(component), nil
+// 	}
+// }
 
-func (c *ComponentRouter) SimpleHxWrap(n SimpleWrapper) {
-	c.HxWrap(simpleWrapFunc(n))
-}
-
+// func (c *ComponentRouter) SimpleHxWrap(n SimpleWrapper) {
+// 	c.HxWrap(simpleWrapFunc(n))
+// }
+//
 /*
 Adds a new componentHandler to the routers routes with the provided path and method
 
@@ -137,6 +137,7 @@ func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, me
 		componentErrCatchers: c.componentCatchers,
 		scripts:              c.scripts,
 		triggers:             c.triggers,
+		shouldWrap:           true,
 	}
 
 	c.componentRoutes = append(c.componentRoutes, route)
@@ -177,6 +178,7 @@ func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRoute
 			componentErrCatchers: append(cr.componentErrCatchers, c.componentCatchers...),
 			scripts:              append(cr.scripts, c.scripts...),
 			triggers:             append(cr.triggers, c.triggers...),
+			shouldWrap:           cr.shouldWrap,
 		}
 		// copy from c to cr so that component triggers overwrite router triggers on conflict
 		c.componentRoutes = append(c.componentRoutes, newRoute)

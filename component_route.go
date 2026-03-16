@@ -30,6 +30,7 @@ type ComponentRoute struct {
 	componentErrCatchers []ComponentErrCatcher
 	scripts              []string
 	triggers             []Trigger
+	shouldWrap           bool
 }
 
 func (c *ComponentRoute) Trigger(event, message string) *ComponentRoute {
@@ -40,9 +41,10 @@ func (c *ComponentRoute) Trigger(event, message string) *ComponentRoute {
 	return c
 }
 
-type IComponentRoute interface {
-	Catch(catcher ...ComponentErrCatcher) IComponentRoute
-	Use(m Middleware) IComponentRoute
+func SimpleComponent(componentFunc func() templ.Component) ComponentHandler {
+	return func(rw *RW) (templ.Component, error) {
+		return componentFunc(), nil
+	}
 }
 
 func UnsafeComponent(unsafeHandler UnsafeComponentHandler) ComponentHandler {
@@ -51,12 +53,17 @@ func UnsafeComponent(unsafeHandler UnsafeComponentHandler) ComponentHandler {
 	}
 }
 
-func (c *ComponentRoute) Catch(catcher ...ComponentErrCatcher) IComponentRoute {
+func (c *ComponentRoute) Catch(catcher ...ComponentErrCatcher) *ComponentRoute {
 	c.componentErrCatchers = append(catcher, c.componentErrCatchers...)
 	return c
 }
 
-func (c *ComponentRoute) Use(m Middleware) IComponentRoute {
+func (c *ComponentRoute) DontWrap() *ComponentRoute {
+	c.shouldWrap = false
+	return c
+}
+
+func (c *ComponentRoute) Use(m Middleware) *ComponentRoute {
 	c.middlewares = append([]Middleware{m}, c.middlewares...)
 	return c
 }
@@ -122,23 +129,25 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 					break
 				}
 			}
-		}
 
-		if err != nil {
-			return err
-		}
-
-		// wrap the component
-		for _, wrapper := range c.wrappers {
-			// attempt to wrap
-			component, err = wrapper.wrap(rw, component)
-			// if an err is returned attempt to resolve with err method
-			if err != nil {
-				component, err = wrapper.err(rw, component, err)
-			}
-			// if error is unresolved, return it
 			if err != nil {
 				return err
+			}
+		}
+
+		if c.shouldWrap {
+			// wrap the component
+			for _, wrapper := range c.wrappers {
+				// attempt to wrap
+				component, err = wrapper.wrap(rw, component)
+				// if an err is returned attempt to resolve with err method
+				if err != nil {
+					component, err = wrapper.err(rw, component, err)
+				}
+				// if error is unresolved, return it
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -154,13 +163,11 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 		triggersJson := c.triggersJson()
 
 		if triggersJson != "" {
-			rw.ResponseWriter.Header().Set("HX-Trigger", string(triggersJson))
+			rw.ResponseWriter.Header().Set("HX-Trigger", triggersJson)
 		}
 
 		// render
-		component.Render(rw.Request.Context(), rw.ResponseWriter)
-
-		return nil
+		return component.Render(rw.Request.Context(), rw.ResponseWriter)
 	}
 
 	// apply middlewares to the created handler

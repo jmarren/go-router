@@ -12,6 +12,32 @@ type RW struct {
 	*http.Request
 }
 
+// Request Headers
+func (rw *RW) Target() string {
+	return rw.Request.Header.Get("HX-Target")
+}
+
+func (rw *RW) TriggerName() string {
+	return rw.Request.Header.Get("HX-Trigger-Name")
+}
+
+func (rw *RW) TriggerId() string {
+	return rw.Request.Header.Get("HX-Trigger")
+}
+
+func (rw *RW) IsHistoryRestoreRequest() bool {
+	return rw.Request.Header.Get("HX-History-Restore-Request") == "true"
+}
+
+func (rw *RW) Prompt() string {
+	return rw.Request.Header.Get("HX-Prompt")
+}
+
+func (rw *RW) Boosted() bool {
+	return rw.Request.Header.Get("HX-Boosted") == "true"
+}
+
+// Response Headers
 func (rw *RW) Refresh() {
 	rw.ResponseWriter.Header().Set("HX-Refresh", "true")
 }
@@ -40,15 +66,11 @@ func (rw *RW) IsHxRequest() bool {
 	return rw.Request.Header.Get("HX-Request") == "true"
 }
 
-func (rw *RW) ContainsSubPath(subPath string) bool {
-	url, _ := url.Parse(rw.CurrentUrl())
-	return strings.Contains(url.Path, subPath)
-}
-
 func (rw *RW) CurrentUrl() string {
 	return rw.Request.Header.Get("HX-Current-Url")
 }
 
+// Custom Headers
 func (rw *RW) ExecutedScripts() []string {
 
 	executedStr := rw.Request.Header.Get("HX-Executed")
@@ -58,4 +80,11 @@ func (rw *RW) ExecutedScripts() []string {
 	json.Unmarshal([]byte(executedStr), &executed)
 
 	return executed
+}
+
+// Other
+func (rw *RW) PathHasPrefix(subPath string) bool {
+	url, _ := url.Parse(rw.CurrentUrl())
+	path := url.Path
+	return strings.HasPrefix(path, subPath)
 }

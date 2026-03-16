@@ -2,6 +2,8 @@ package views
 
 templ NumbersNester(c templ.Component) {
 	<div id="container">
+		<div id="hi-container"></div>
+		<button id="say-hi" hx-get="/numbers/say-hi" hx-target="#hi-container">say hi!</button>
 		<button id="fun-button">fun</button>
 		<a href="/colors/red" hx-target="#container">red</a>
 		<div>numbers</div>
