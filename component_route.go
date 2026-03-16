@@ -23,7 +23,7 @@ type Trigger struct {
 
 type ComponentRoute struct {
 	middlewares          []Middleware
-	wrappers             []Wrapper
+	wrapper              Wrapper
 	path                 string
 	method               string
 	component            ComponentHandler
@@ -137,18 +137,18 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 
 		if c.shouldWrap {
 			// wrap the component
-			for _, wrapper := range c.wrappers {
-				// attempt to wrap
-				component, err = wrapper.wrap(rw, component)
-				// if an err is returned attempt to resolve with err method
-				if err != nil {
-					component, err = wrapper.err(rw, component, err)
-				}
-				// if error is unresolved, return it
-				if err != nil {
-					return err
-				}
+			component, err = c.wrapper.wrapperFunc()(rw, component)
+			if err != nil {
+				return err
 			}
+			// for _, wrapper := range c.wrappers {
+			// 	// attempt to wrap
+			// 	component, err = wrapper.wrapperFunc()(rw, component)
+			// 	// if error is unresolved, return it
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// }
 		}
 
 		// add scripts

@@ -55,13 +55,22 @@ func (c *ComponentRouter) UseScripts(src ...string) *ComponentRouter {
 	return c
 }
 
+// func (c *ComponentRouter) UseWrapper(w WrapperFunc) Wrapper {
+// 	c.wrapper.UseFunc(w)
+// 	return c.wrapper
+// }
+
 /*
 applies a wrapper to the ComponentRouter so that all subsequently added
 componentRoutes are wrapped with the provided function
 */
-func (c *ComponentRouter) UseWrapper(w WrapperFunc) Wrapper {
-	c.wrapper.Use(w)
+func (c *ComponentRouter) Wrapper() Wrapper {
 	return c.wrapper
+}
+
+func (c *ComponentRouter) UsePrefixWrap() *ComponentRouter {
+	c.prefixWrap = true
+	return c
 }
 
 // wraps the component using the provided wrapperFunc only if the
@@ -83,8 +92,8 @@ func (c *ComponentRouter) UseWrapper(w WrapperFunc) Wrapper {
 // creates a wrapper with empty err handler,
 // applies the hxWrapMiddleware to it,
 // then returns it
-func (c *ComponentRouter) HxWrap(w WrapperFunc) Wrapper {
-	c.wrapper.Use(w)
+func (c *ComponentRouter) HxWrap() Wrapper {
+	c.wrapper.Use(hxWrapMiddleware)
 	return c.wrapper
 }
 
@@ -98,7 +107,7 @@ A pointer to the added route is returned so that methods may be chained
 func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, method string) *ComponentRoute {
 
 	route := &ComponentRoute{
-		wrappers:             []Wrapper{c.wrapper},
+		wrapper:              c.wrapper,
 		path:                 path,
 		method:               method,
 		component:            ch,
@@ -137,13 +146,20 @@ The mounted component inherits all the properties of the mounter
 */
 func (c *ComponentRouter) SubComponent(path string, subComponent *ComponentRouter) {
 
+	subComponent.wrapper.UseFunc(c.wrapper.wrapperFunc())
+	if subComponent.prefixWrap {
+		subComponent.wrapper.Use(PrefixWrap(path))
+	}
+
 	for _, cr := range subComponent.componentRoutes {
+
+		// wrapper :=
 
 		newRoute := &ComponentRoute{
 			path:                 path + cr.path,
 			method:               cr.method,
 			component:            cr.component,
-			wrappers:             append(cr.wrappers, c.wrapper),
+			wrapper:              cr.wrapper,
 			middlewares:          append(cr.middlewares, c.middlewares...),
 			componentErrCatchers: append(cr.componentErrCatchers, c.componentCatchers...),
 			scripts:              append(cr.scripts, c.scripts...),

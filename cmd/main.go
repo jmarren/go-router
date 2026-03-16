@@ -48,6 +48,17 @@ func pageCatcher(rw *gorouter.RW, component templ.Component, err error) (templ.C
 	return component, err
 }
 
+func PageWrap(w gorouter.WrapperFunc) gorouter.WrapperFunc {
+	return func(rw *gorouter.RW, component templ.Component) (templ.Component, error) {
+		var err error
+		component, err = w(rw, component)
+		if err != nil {
+			return component, err
+		}
+		return Page(rw, component)
+	}
+}
+
 func main() {
 	app := gorouter.CreateApp()
 	app.UseStaticDir("./static")
@@ -56,10 +67,12 @@ func main() {
 	// app.UseScripts("/static/index.js")
 
 	app.Use(middleware.Logger)
+
 	// simple wrap the base component
 	// app.SimpleHxWrap(views.Base)
 	// hx-wrap the Page function and catch errors with the PageCatcher
-	app.HxWrap(Page).Catch(pageCatcher)
+	app.HxWrap()
+	app.Wrapper().UseFunc(Page).Catch(pageCatcher)
 	app.GetComponent("/", handleRoot)
 	app.GetComponent("/hi", handleHi)
 
