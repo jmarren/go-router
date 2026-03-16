@@ -33,12 +33,10 @@ type ComponentRoute struct {
 }
 
 func (c *ComponentRoute) Trigger(event, message string) *ComponentRoute {
-	fmt.Printf("adding trigger to route = %s: %s\n", event, message)
 	c.triggers = append(c.triggers, Trigger{
 		event,
 		message,
 	})
-	// c.triggers[event] = message
 	return c
 }
 
@@ -70,12 +68,37 @@ func (c *ComponentRoute) UseScripts(srcs ...string) *ComponentRoute {
 
 func (c *ComponentRoute) head(alreadyExecuted []string) templ.Component {
 	toExecute := []string{}
+
+	// only add unexecuted scripts to the toExecute slice
 	for _, script := range c.scripts {
 		if !slices.Contains(alreadyExecuted, script) {
 			toExecute = append(toExecute, script)
 		}
 	}
 	return views.WrapHead(views.ScriptHead(toExecute...))
+}
+
+func (c *ComponentRoute) triggersJson() string {
+
+	if len(c.triggers) == 0 {
+		return ""
+	}
+
+	// create a map to can marshal into json properly
+	triggerMap := map[string]string{}
+
+	for _, trigger := range c.triggers {
+		triggerMap[trigger.event] = trigger.message
+	}
+
+	triggersJson, err := json.Marshal(triggerMap)
+
+	if err != nil {
+		fmt.Printf("error marshalling triggers into json: %s\n", err)
+	}
+
+	return string(triggersJson)
+
 }
 
 func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
@@ -119,38 +142,19 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 			}
 		}
 
-		if err != nil {
-			return err
-		}
-
-		if rw.Request.Header.Get("HX-Request") != "true" {
+		// add scripts
+		if !rw.IsHxRequest() {
 			component = baseWrapper(component, c.scripts...)
 		} else {
-			executedStr := rw.Request.Header.Get("HX-Executed")
-
-			var executed []string
-
-			json.Unmarshal([]byte(executedStr), &executed)
-
+			executed := rw.ExecutedScripts()
 			component = templ.Join(component, c.head(executed))
 		}
 
-		// create triggers
-		if len(c.triggers) > 0 {
+		// add triggers
+		triggersJson := c.triggersJson()
 
-			triggerMap := map[string]string{}
-
-			for _, trigger := range c.triggers {
-				triggerMap[trigger.event] = trigger.message
-			}
-
-			triggersJson, err := json.Marshal(triggerMap)
-
-			if err != nil {
-				fmt.Printf("error marshalling triggers into json: %s\n", err)
-			} else {
-				rw.ResponseWriter.Header().Set("HX-Trigger", string(triggersJson))
-			}
+		if triggersJson != "" {
+			rw.ResponseWriter.Header().Set("HX-Trigger", string(triggersJson))
 		}
 
 		// render

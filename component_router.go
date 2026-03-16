@@ -75,6 +75,21 @@ func (c *ComponentRouter) UseWrapFunc(w WrapperFunc) Wrapper {
 	return wrapper
 }
 
+// wraps the component using the provided wrapperFunc only if the
+// current url of the request does not contain the provided subpath string
+func (c *ComponentRouter) WrapWithoutSubpath(subPath string, w WrapperFunc) Wrapper {
+	wrapperFunc := func(rw *RW, component templ.Component) (templ.Component, error) {
+		if rw.ContainsSubPath(subPath) {
+			return component, nil
+		}
+
+		return w(rw, component)
+	}
+	wrapper := createWrapper(wrapperFunc, nil)
+	c.UseWrapper(wrapper)
+	return wrapper
+}
+
 // creates a wrapper with empty err handler,
 // applies the hxWrapMiddleware to it,
 // then returns it

@@ -14,3 +14,8 @@ htmx.on("hi", (event) => {
 htmx.on("bye", (event) => {
 	console.log("bye triggered")
 })
+
+
+htmx.on("numbers", (event) => {
+	console.log("numbers triggered")
+})

@@ -4,15 +4,6 @@ import (
 	"net/http"
 )
 
-type RW struct {
-	http.ResponseWriter
-	*http.Request
-}
-
-func (rw *RW) IsHxRequest() bool {
-	return rw.Request.Header.Get("HX-Request") == "true"
-}
-
 type ErrCatcher func(rw *RW, err error) error
 
 type Handler func(rw *RW) error
