@@ -17,6 +17,7 @@ type Wrapper interface {
 	Catch(errFunc WrapperErrFunc) Wrapper
 	Use(m WrapMiddleware) Wrapper
 	UseFunc(w WrapperFunc) Wrapper
+	Clone() Wrapper
 }
 
 type wrapper struct {
@@ -35,6 +36,11 @@ func (wr *wrapper) wrapperFunc() func(rw *RW, component templ.Component) (templ.
 
 		return component, err
 	}
+}
+
+func (wr *wrapper) Clone() Wrapper {
+	clone := *wr
+	return &clone
 }
 
 func (wr *wrapper) err(rw *RW, component templ.Component, err error) (templ.Component, error) {
@@ -70,6 +76,7 @@ func (wr *wrapper) UseFunc(w WrapperFunc) Wrapper {
 }
 
 func PrefixWrap(prefix string) WrapMiddleware {
+	fmt.Printf("prefix wrapping %s\n", prefix)
 	return func(w WrapperFunc) WrapperFunc {
 		return func(rw *RW, component templ.Component) (templ.Component, error) {
 			fmt.Printf("checking if path %s has prefix %s\n", rw.URL.Path, prefix)

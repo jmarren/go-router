@@ -25,3 +25,27 @@ templ Two() {
 		<a href="/numbers/one" hx-target="#two">1</a>
 	</div>
 }
+
+
+templ Yes() {
+	<div id="answer">
+		<a href="/numbers/is-even/one" hx-target="#answer">try 1</a>
+		<div>no</div>
+	</div>
+}
+
+
+templ No() {
+	<div id="answer">
+		<a href="/numbers/is-even/two" hx-target="#answer">try 2</a>
+		<div>no</div>
+	</div>
+}
+
+templ IsEven(c templ.Component) {
+	
+	<div id="is-even"><div> is even ? </div>
+		@c
+	</div>
+	
+}

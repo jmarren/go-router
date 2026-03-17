@@ -62,27 +62,23 @@ func PageWrap(w gorouter.WrapperFunc) gorouter.WrapperFunc {
 func main() {
 	app := gorouter.CreateApp()
 	app.UseStaticDir("./static")
+	app.Use(middleware.UserMiddleware)
 
 	app.UseBaseWrapper(views.Base)
-	// app.UseScripts("/static/index.js")
-
 	app.Use(middleware.Logger)
 
-	// simple wrap the base component
-	// app.SimpleHxWrap(views.Base)
-	// hx-wrap the Page function and catch errors with the PageCatcher
-	app.Wrapper().UseFunc(Page).Catch(pageCatcher)
+	app.Wrap(Page).Catch(pageCatcher)
 	app.HxWrap()
 	app.GetComponent("/", handleRoot)
 	app.GetComponent("/hi", handleHi)
 
-	// api := gorouter.CreateRouter()
-	// api.Get("/hi", SayHi)
-	// colorsPage.SubRoute("/api", api)
-
-	app.SubComponent("/colors", pages.ColorsPage)
-	app.SubComponent("/numbers", pages.NumbersPage)
+	app.AddSubComponent("/colors", pages.ColorsPage)
+	app.AddSubComponent("/numbers", pages.NumbersPage)
 
 	app.Serve(":6060")
 
 }
+
+// api := gorouter.CreateRouter()
+// api.Get("/hi", SayHi)
+// colorsPage.SubRoute("/api", api)

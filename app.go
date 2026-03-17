@@ -1,6 +1,7 @@
 package gorouter
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/a-h/templ"
@@ -38,6 +39,12 @@ func (a *App) UseStaticDir(dir string) {
 // applies the apps routes to the apps mux
 func (a *App) applyRoutes() {
 
+	applyFuncs := a.applySubComponents("", []func(){})
+
+	for _, fn := range applyFuncs {
+		fn()
+	}
+
 	// handle regular routes with path
 	for _, route := range a.routes {
 		a.mux.Handle(route.path, route.HTTPHandler())
@@ -45,6 +52,7 @@ func (a *App) applyRoutes() {
 
 	// handle component routes with path
 	for _, route := range a.componentRoutes {
+		fmt.Printf("registering path = %s\n", route.path)
 		a.mux.Handle(route.path, route.HTTPHandler(a.baseWrapper))
 	}
 }

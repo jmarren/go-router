@@ -15,55 +15,37 @@ func wrapNumbers(rw *gorouter.RW, component templ.Component) (templ.Component, e
 	return views.NumbersNester(component), nil
 }
 
+func handleOneEven(rw *gorouter.RW) (templ.Component, error) {
+	fmt.Println("handling one even")
+	return views.No(), nil
+}
+
+func handleTwoEven(rw *gorouter.RW) (templ.Component, error) {
+	return views.Yes(), nil
+}
+
+func wrapIsEven(rw *gorouter.RW, component templ.Component) (templ.Component, error) {
+	fmt.Printf("wrapping IsEven\n")
+	return views.IsEven(component), nil
+}
+
 func init() {
 	NumbersPage = gorouter.CreateComponentRouter()
-	/*
-		wrapper = func (rw *RW, component templ.Component) (templ.Component, error) {
-			return component, nil
-		}
-	*/
-
 	NumbersPage.UsePrefixWrap()
-	NumbersPage.Wrapper().UseFunc(wrapNumbers)
-
-	/*
-		func(rw *RW, component templ.Component) (templ.Component, error) {
-			var err error
-			component, err = func (rw *RW, component templ.Component) (templ.Component, error) {
-				return component, nil
-			}
-
-
-			if err != nil {
-				return component, err
-			}
-
-			return wrapNumbers(rw, component)
-		}
-
-		wrapper = 	*/
+	NumbersPage.Wrap(wrapNumbers)
 	NumbersPage.UseScripts("numbers.js").Trigger("numbers", "")
 	NumbersPage.GetComponent("/one", gorouter.SimpleComponent(views.One)).UseScripts("one.js").Trigger("hi", "")
 	NumbersPage.GetComponent("/two", gorouter.SimpleComponent(views.Two)).UseScripts("two.js").Trigger("bye", "")
 	NumbersPage.GetComponent("/say-hi", gorouter.SimpleComponent(views.Hi)).DontWrap()
 
-	// on mount
+	SubNums := gorouter.CreateComponentRouter()
 
-	/*
-		func(rw *RW, component templ.Component) (templ.Component, error) {
-			var err error
-			component, err = func (rw *RW, component templ.Component) (templ.Component, error) {
-				return component, nil
-			}
+	SubNums.Wrap(wrapIsEven)
+	SubNums.UsePrefixWrap()
 
+	SubNums.GetComponent("/one", handleOneEven)
+	SubNums.GetComponent("/two", handleTwoEven)
 
-			if err != nil {
-				return component, err
-			}
-
-			return wrapNumbers(rw, component)
-		}
-
-		wrapper = 	*/
+	NumbersPage.AddSubComponent("/is-even", SubNums)
 
 }
