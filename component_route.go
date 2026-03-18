@@ -31,6 +31,7 @@ type ComponentRoute struct {
 	scripts              []string
 	triggers             []Trigger
 	shouldWrap           bool
+	target               string
 }
 
 func (c *ComponentRoute) Trigger(event, message string) *ComponentRoute {
@@ -55,6 +56,11 @@ func UnsafeComponent(unsafeHandler UnsafeComponentHandler) ComponentHandler {
 
 func (c *ComponentRoute) Catch(catcher ...ComponentErrCatcher) *ComponentRoute {
 	c.componentErrCatchers = append(catcher, c.componentErrCatchers...)
+	return c
+}
+
+func (c *ComponentRoute) Retarget(target string) *ComponentRoute {
+	c.target = target
 	return c
 }
 
@@ -117,6 +123,8 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 	// - renders component
 	handler := func(rw *RW) error {
 
+		rw.Retarget(c.target)
+
 		// create the component using the componentHandler
 		component, err := c.component(rw)
 
@@ -141,14 +149,6 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 			if err != nil {
 				return err
 			}
-			// for _, wrapper := range c.wrappers {
-			// 	// attempt to wrap
-			// 	component, err = wrapper.wrapperFunc()(rw, component)
-			// 	// if error is unresolved, return it
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			// }
 		}
 
 		// add scripts
@@ -157,6 +157,12 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 		} else {
 			executed := rw.ExecutedScripts()
 			component = templ.Join(component, c.head(executed))
+		}
+
+		// // retarget
+		if rw.target != "" {
+			fmt.Printf("rw.target =  %s\n", rw.target)
+			rw.ResponseWriter.Header().Set("HX-Retarget", rw.target)
 		}
 
 		// add triggers
@@ -180,6 +186,7 @@ func (c *ComponentRoute) HTTPHandler(baseWrapper baseWrapper) http.HandlerFunc {
 		err := handler(&RW{
 			Request:        r,
 			ResponseWriter: w,
+			target:         "",
 		})
 		if err != nil {
 			panic(err)

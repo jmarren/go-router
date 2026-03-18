@@ -18,6 +18,7 @@ type Wrapper interface {
 	Use(m WrapMiddleware) Wrapper
 	UseFunc(w WrapperFunc) Wrapper
 	Clone() Wrapper
+	Retarget(target string) Wrapper
 }
 
 type wrapper struct {
@@ -41,6 +42,11 @@ func (wr *wrapper) wrapperFunc() func(rw *RW, component templ.Component) (templ.
 func (wr *wrapper) Clone() Wrapper {
 	clone := *wr
 	return &clone
+}
+
+func (wr *wrapper) Retarget(target string) Wrapper {
+	wr.Use(retargetMiddleware(target))
+	return wr
 }
 
 func (wr *wrapper) err(rw *RW, component templ.Component, err error) (templ.Component, error) {
@@ -75,15 +81,18 @@ func (wr *wrapper) UseFunc(w WrapperFunc) Wrapper {
 	return wr
 }
 
-func PrefixWrap(prefix string) WrapMiddleware {
+func PrefixWrap(prefix string, target string) WrapMiddleware {
 	fmt.Printf("prefix wrapping %s\n", prefix)
 	return func(w WrapperFunc) WrapperFunc {
 		return func(rw *RW, component templ.Component) (templ.Component, error) {
-			fmt.Printf("checking if path %s has prefix %s\n", rw.URL.Path, prefix)
+			fmt.Printf("checking if path %s has prefix %s\n\n", rw.URL.Path, prefix)
 			if rw.PathHasPrefix(prefix) {
 				fmt.Printf("path %s has prefix %s\n", rw.URL.Path, prefix)
 				return component, nil
 			}
+
+			fmt.Printf("targeting %s\n", target)
+			rw.Retarget(target)
 			return w(rw, component)
 		}
 	}
@@ -148,5 +157,15 @@ func hxWrapMiddleware(wr WrapperFunc) WrapperFunc {
 			return component, nil
 		}
 		return wr(rw, component)
+	}
+}
+
+func retargetMiddleware(target string) WrapMiddleware {
+	return func(w WrapperFunc) WrapperFunc {
+		return func(rw *RW, component templ.Component) (templ.Component, error) {
+			fmt.Printf("retargeting %s\n", target)
+			rw.Retarget(target)
+			return w(rw, component)
+		}
 	}
 }

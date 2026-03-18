@@ -14,8 +14,11 @@ templ Base(content templ.Component, scripts ...string) {
 
 templ Page(content templ.Component, username string) {
 		<div>username: { username }</div>
+		<div id="content">
 		@content
+		</div>
 		<div id="side-panel"></div>
 		<div>app</div>
 		<button hx-get="/components/side-panel"></button>
+
 }

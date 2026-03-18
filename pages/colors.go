@@ -27,6 +27,7 @@ var ColorsPage *gorouter.ComponentRouter
 func init() {
 	ColorsPage = gorouter.CreateComponentRouter()
 	ColorsPage.UsePrefixWrap()
+	ColorsPage.Retarget("#container")
 	ColorsPage.Wrap(gorouter.SimpleWrapper(views.ColorsPage))
 	ColorsPage.Use(middleware.LogUsernameMiddleware)
 	ColorsPage.GetComponent("/red", gorouter.SimpleComponent(views.Red))

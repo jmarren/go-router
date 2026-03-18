@@ -1,0 +1,28 @@
+package views
+
+
+templ Dashboard(component templ.Component) {
+	<div id="dashboard">
+	<div>Dashboard</div>
+		<a href="/dashboard/metrics">metrics</a>
+		<a href="/dashboard/account">account</a>
+		<a href="/dashboard/settings">settings</a>
+		<a href="/numbers/one">One</a>
+			@component
+	</div>
+}
+
+
+templ Metrics() {
+	<div id="dashboard-component">this is the metrics page</div>
+}
+
+
+templ Account() {
+	<div id="dashboard-component">this is the account page</div>
+}
+
+
+templ Settings() {
+	<div id="dashboard-component">this is the settings page</div>
+}

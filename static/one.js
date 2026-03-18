@@ -1,7 +1,7 @@
 console.log("one!")
 
 function makeNumberGreen() {
-	document.querySelector(".number").style.backgroundColor = "green"
+	document.querySelector(".number").style.backgroundColor = "lightgreen"
 }
 
 makeNumberGreen()

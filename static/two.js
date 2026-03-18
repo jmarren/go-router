@@ -2,7 +2,7 @@
 console.log("two!")
 
 function makeNumberBlue() {
-	document.querySelector(".number").style.backgroundColor = "blue"
+	document.querySelector(".number").style.backgroundColor = "lightblue"
 }
 
 makeNumberBlue()

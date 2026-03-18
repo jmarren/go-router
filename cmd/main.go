@@ -68,12 +68,13 @@ func main() {
 	app.Use(middleware.Logger)
 
 	app.Wrap(Page).Catch(pageCatcher)
-	app.HxWrap()
+	app.HxWrap().Retarget("#content")
 	app.GetComponent("/", handleRoot)
 	app.GetComponent("/hi", handleHi)
 
 	app.AddSubComponent("/colors", pages.ColorsPage)
 	app.AddSubComponent("/numbers", pages.NumbersPage)
+	app.AddSubComponent("/dashboard", pages.DashboardPage)
 
 	app.Serve(":6060")
 

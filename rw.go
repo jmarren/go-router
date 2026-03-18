@@ -10,6 +10,7 @@ import (
 type RW struct {
 	http.ResponseWriter
 	*http.Request
+	target string
 }
 
 // Request Headers
@@ -43,7 +44,8 @@ func (rw *RW) Refresh() {
 }
 
 func (rw *RW) Retarget(target string) {
-	rw.ResponseWriter.Header().Set("HX-Retarget", target)
+	rw.target = target
+	// rw.ResponseWriter.Header().Set("HX-Retarget", target)
 }
 
 func (rw *RW) Reselect(target string) {

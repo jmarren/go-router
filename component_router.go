@@ -38,6 +38,8 @@ type ComponentRouter struct {
 	path string
 
 	prefixWrap bool
+
+	target string
 }
 
 /* creates an empty ComponentRouter */
@@ -49,6 +51,8 @@ func CreateComponentRouter() *ComponentRouter {
 		wrapper:         defaultWrapper(),
 		componentRoutes: []*ComponentRoute{},
 		triggers:        []Trigger{},
+		target:          "",
+		prefixWrap:      false,
 	}
 }
 
@@ -57,6 +61,11 @@ func (c *ComponentRouter) Trigger(event, message string) *ComponentRouter {
 		event,
 		message,
 	})
+	return c
+}
+
+func (c *ComponentRouter) Retarget(target string) *ComponentRouter {
+	c.target = target
 	return c
 }
 
@@ -82,22 +91,6 @@ func (c *ComponentRouter) UsePrefixWrap() *ComponentRouter {
 	c.prefixWrap = true
 	return c
 }
-
-// wraps the component using the provided wrapperFunc only if the
-// current url of the request does not contain the provided subpath string
-// func (c *ComponentRouter) PrefixWrap(subPath string, w WrapperFunc) Wrapper {
-// 	wrapperFunc := func(rw *RW, component templ.Component) (templ.Component, error) {
-//
-// 		if rw.PathHasPrefix(subPath) {
-// 			return component, nil
-// 		}
-//
-// 		return w(rw, component)
-// 	}
-//
-// 	c.wrapper.Use(wrapperFunc)
-// 	return c.wrapper
-// }
 
 // creates a wrapper with empty err handler,
 // applies the hxWrapMiddleware to it,
@@ -126,6 +119,7 @@ func (c *ComponentRouter) addComponentRoute(path string, ch ComponentHandler, me
 		scripts:              c.scripts,
 		triggers:             c.triggers,
 		shouldWrap:           true,
+		target:               c.target,
 	}
 
 	c.componentRoutes = append(c.componentRoutes, route)
@@ -177,20 +171,13 @@ The mounted component inherits all the properties of the mounter
 */
 func (c *ComponentRouter) subComponent(path string, subComponent *ComponentRouter) {
 
-	// use the routers wrapperFunc
-	// subComponent.Wrap(c.wrapper.wrapperFunc())
-	// if prefixWrap,
-	// then prefixWrap with the new base path
-
 	for _, cr := range subComponent.componentRoutes {
 
 		wrapper := cr.wrapper.Clone().UseFunc(c.wrapper.wrapperFunc())
 
 		if subComponent.prefixWrap {
-			wrapper.Use(PrefixWrap(path))
+			wrapper.Use(PrefixWrap(path, c.target))
 		}
-
-		fmt.Printf("path = %s\n", cr.path)
 
 		newRoute := &ComponentRoute{
 			path:                 path + cr.path,
@@ -202,6 +189,7 @@ func (c *ComponentRouter) subComponent(path string, subComponent *ComponentRoute
 			scripts:              append(cr.scripts, c.scripts...),
 			triggers:             append(cr.triggers, c.triggers...),
 			shouldWrap:           cr.shouldWrap,
+			target:               cr.target,
 		}
 		// copy from c to cr so that component triggers overwrite router triggers on conflict
 		c.componentRoutes = append(c.componentRoutes, newRoute)

@@ -13,16 +13,17 @@ templ NumbersNester(c templ.Component) {
 
 
 templ One() {
-	<div class="number" id="one" >
+	<div class="number" id="number" >
 		<div>the number is 1!</div>
-		<a href="/numbers/two" hx-target="#one">2</a>
+		<a href="/numbers/two"  >2</a>
 	</div>
 }
 
 templ Two() {
-	<div class="number" id="two">
+	<div class="number" id="number">
 		<div>the number is 2!</div>
-		<a href="/numbers/one" hx-target="#two">1</a>
+		<a href="/numbers/one" >1</a>
+		<a href="/numbers/is-even/two" >is it even?</a>
 	</div>
 }
 
